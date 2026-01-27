@@ -1,0 +1,25 @@
+Package: EggImpute
+Title: Egg Laying Data Analysis and Imputation
+Version: 0.1.0
+Authors@R: 
+    person("Chi Mei", "Sun", email = "chimei.sun@fli.de", role = c("aut", "cre"))
+Description: Tools for analyzing egg laying patterns, imputing missing laying dates,
+    and assigning eggs to animals using probabilistic methods. Includes data preparation,
+    Hidden Markov Model-based imputation, and cross-validation utilities.
+License: GPL-3
+Depends: 
+    R (>= 4.0.0)
+Imports:
+    data.table (>= 1.14.2),
+    depmixS4 (>= 1.5.0),
+    ggplot2 (>= 3.4.0),
+    hms (>= 1.1.2),
+    lubridate (>= 1.9.0),
+    patchwork (>= 1.1.2)
+Suggests:
+    testthat (>= 3.0.0),
+    knitr,
+    rmarkdown
+Encoding: UTF-8
+Roxygen: list(markdown = TRUE)
+RoxygenNote: 7.3.3
