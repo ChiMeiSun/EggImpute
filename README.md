@@ -40,7 +40,7 @@ Egg laying behavior is modeled through three complementary behavioral scenarios:
 install.packages("devtools")
 
 # Install EggImpute
-devtools::install_github("YourUsername/EggImpute")
+devtools::install_github("ChiMeiSun/EggImpute")
 
 # Load the package
 library(EggImpute)
