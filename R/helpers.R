@@ -288,11 +288,11 @@ get_trusted <- function(res_list) {
 
 
 
-#' Get prob/assign results as a [date x ani] matrix
+#' Get prob/assign results as a `[date x ani]` matrix
 #'
 #' @param res_list A list contains both or either "prob" and "assign" output
 #'
-#' @return A matrix of results [date x ani]
+#' @return A matrix of results `[date x ani]`
 #' @export
 #'
 get_matrix <- function(res_list, type = "assign") {
