@@ -1,5 +1,8 @@
-# in the demo data, we assume each pen consists 4 automated nests
+# devtools::install_github("ChiMeiSun/EggImpute")
 
+# in the demo data, we assume each pen consists 4 automated nests
+library(EggImpute)
+library(hms)
 data(meta_demo)
 data(hand_demo)
 data(ani_info_demo)
@@ -8,7 +11,6 @@ data(ani_info_demo)
 
 
 
-######### find the best off time to adjust the autonest clock (optional) #########
 time_cols <- c("Time_start", "Time_end")
 hand_demo[, (time_cols) := lapply(.SD, as_hms), .SDcols = time_cols]
 hand_demo[, Date := as.Date(Date, format = "%Y-%m-%d")]
@@ -16,6 +18,7 @@ collect_min <- as.numeric(median(hand_demo$Time_end - hand_demo$Time_start) / 60
 
 Nestnumbers <- sort(unique(meta_demo$Nestnumber))
 
+######### find the best off time to adjust the autonest clock (optional) #########
 ot_res <- find_best_ot_min(meta_demo, hand_demo, from = NULL, to = NULL,
                  hand_nest_colnames = c("Nest1", "Nest2", "Nest3", "Nest4"),
                  Nestnumbers = Nestnumbers,
@@ -30,6 +33,7 @@ ot_min <- ot_res[1,1]
 
 
 ######### prepare meta file ready for downstream analysis #########
+# ot_min <- 50
 meta_prep <- prep_data(meta_demo, ot_min = ot_min) 
 
 ## add col "pen" to group Nests
@@ -165,37 +169,13 @@ plot_laying_ani(meta_prep[pen == 1],
 
 
 ######### check results #########
-types = c("prob","assign")
-res_list <- list()
-for (type in types) {
-  file <- list.files(pattern = type)
-  file <- sort(file, decreasing = TRUE)[1]
-  print(file)
-  # Load file into a temporary environment
-  tmp_env <- new.env()
-  load(file, envir = tmp_env)
-  
-  # Extract and save the loaded objects
-  obj_names <- ls(tmp_env)
-  loaded_objs <- mget(obj_names, envir = tmp_env)
-  res_list[[type]] <- loaded_objs
-}
+
+res_list <- load_results(types = c("prob","assign"), new = 1)
 str(res_list, max.level = 1)
 
 
 # check CV
-resCV <- rbindlist(lapply(names(res_list), function(type_name) {
-  CV_res <- res_list[[type_name]]$CV_res
-  
-  tmp <- rbindlist(lapply(seq_along(CV_res), function(i) {
-    dat <- CV_res[[i]]
-    tab <- table(factor(dat$topx, levels = c(TRUE, FALSE))) / nrow(dat)
-    data.table(pen = i, TF = names(tab), prop = as.numeric(tab))
-  }))
-  
-  tmp[, type := type_name]
-  tmp
-}))
+resCV <- get_CV(res_list)
 
 ## plot CV
 ggplot(resCV) +
@@ -209,19 +189,7 @@ resCV[type == "prob" & TF == "TRUE", summary(prop)]
 
 
 # check prob
-respp <- rbindlist(lapply(names(res_list), function(type_name) {
-  pen_res <- res_list[[type_name]]$pen_res
-  
-  tmp <- rbindlist(lapply(pen_res, function(pen) {
-    pen$pen_priors
-  }))
-  
-  tmpp <- tmp[, .(sum_prior = sum(prior)), by = ani]
-
-  tmpp[, type := type_name]
-  tmpp
-}))
-
+respp <- get_prob(res_list)
 table(respp$type)
 
 ## plot prob
@@ -239,11 +207,9 @@ ggplot(respp) +
 
 
 # trusted
-restt <- rbindlist(lapply(res_list[["prob"]]$pen_res, function(pen) {
-  pen$pen_trusted
-}))
+restt <- get_trusted(res_list)
 
-
+resmat <- get_matrix(res_list, type = "assign")
 
 
 
