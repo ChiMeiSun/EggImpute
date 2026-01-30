@@ -131,6 +131,48 @@ Make_pen_number <- function(meta, Nestnumbers, num_per_pen, verbose = TRUE) {
 }
 
 
+
+#' Create Test Windows with Minimum Days
+#'
+#' This function generates test windows between a start and end date,
+#' ensuring each window contains at least a minimum number of days.
+#' If the remaining days at the end are less than the minimum,
+#' they are added to the last window.
+#'
+#' @param start_date Start date of the testing period (Date or character)
+#' @param end_date End date of the testing period (Date or character)
+#' @param min_days Minimum number of days in each window (default = 30)
+#'
+#' @return A data.table with columns 'from' and 'to' for each window
+#'
+#' @export
+get_test_win <- function(start_date, end_date, min_days = 30) {
+  check_date(start_date)
+  check_date(end_date)
+  start_date <- as_date(start_date)
+  end_date <- as_date(end_date)
+  
+  if (start_date >= end_date) stop("start_date must be before end_date")
+  if (!is.numeric(min_days) || min_days < 1) stop("`num_per_pen` must be a positive integer >1")
+
+
+  total_days <- as.numeric(end_date - start_date) + 1
+  n_windows <- max(1, floor(total_days / min_days))
+  
+  from_dates <- start_date + days((0:(n_windows-1)) * min_days)
+  to_dates <- pmin(from_dates + days(min_days - 1), end_date)
+  
+  # Adjust last window for remainder days
+  if (n_windows > 1) {
+    to_dates[n_windows] <- end_date
+  }
+  
+  # Return result
+  data.table(from = from_dates, to = to_dates)
+}
+
+
+
 #' Combine hand-counted and automated egg data for validation
 #'
 #' @description Reads and integrates manually counted egg data with automatic
