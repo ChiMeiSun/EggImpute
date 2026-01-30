@@ -116,13 +116,16 @@ Make_pen_number <- function(meta, Nestnumbers, num_per_pen, verbose = TRUE) {
 #' @description Reads and integrates manually counted egg data with automatic
 #' nest system data to generate a harmonized table for evaluating egg count accuracy.
 #'
-#' @param meta A `data.table` containing raw autonest data.
-#' @param hand `data.table` containing hand-count egg data.
+#' @param meta A `data.table` containing autonest data after prep_data.
+#' @param hand `data.table` containing hand-count egg data, required columns: `Date`, `Time_end`, `pen`,
+#' and columns included in param `hand_nest_colnames`
 #' @param from,to `Date` or `character(1)`, optional date range.
+#' @param hand_nest_colnames Column names for nests per pen (default: `Nest1, Nest2, Nest3, Nest4`).
 #' @param Nestnumbers Vector of nest numbers (default: `1:64`).
 #' @param num_per_pen Number of nests per pen (default: 4).
 #' @param timezone Time zone used for datetime conversion (default: `"Europe/Berlin"`).
 #' @param collect_min Total time needed in minutes for egg collection (default: 20).
+#' @param fakeegg TRUE/FALSE, if manual transponder for precise time record is available.
 #'
 #' @return A `data.table` containing hand and automatic egg counts per nest and time interval.
 #' with the following key columns:
@@ -332,14 +335,17 @@ get_good_hand_eggcount <- function(meta, hand, from = NULL, to = NULL,
 #' @description Tests a range of time offsets to identify the optimal offset that
 #' maximizes matches between automatic nest records and manually collected hand-count data.
 #'
-#' @param meta_ori A `data.table` objects containing AutoNest data.
-#' @param hand `data.table` containing hand-count egg data.
+#' @param meta_ori A `data.table` objects containing raw AutoNest data before prep_data().
+#' @param hand `data.table` containing hand-count egg data, required columns: `Date`, `Time_end`, `pen`,
+#' and columns included in param `hand_nest_colnames`
 #' @param from,to `Date` or `character(1)`, optional date range.
+#' @param hand_nest_colnames Column names for nests per pen (default: `Nest1, Nest2, Nest3, Nest4`).
 #' @param Nestnumbers Sequence of valid nest numbers (default: `1:64`).
 #' @param num_per_pen Number of nests per pen (default: 4).
 #' @param ot_min_range Range of minute offsets to test (default: `seq(-60, 60, by = 20)`).
 #' @param timezone Time zone used for datetime conversion (default: `"Europe/Berlin"`).
 #' @param collect_min Total time needed for egg collection (default: 20).
+#' @param fakeegg TRUE/FALSE, if manual transponder for precise time record is available.
 #'
 #' @return A `data.table` with tested offsets and their match proportions.
 #' @export

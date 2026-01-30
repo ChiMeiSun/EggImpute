@@ -19,11 +19,14 @@ find_best_ot_min(
 )
 }
 \arguments{
-\item{meta_ori}{A \code{data.table} objects containing AutoNest data.}
+\item{meta_ori}{A \code{data.table} objects containing raw AutoNest data before prep_data().}
 
-\item{hand}{\code{data.table} containing hand-count egg data.}
+\item{hand}{\code{data.table} containing hand-count egg data, required columns: \code{Date}, \code{Time_end}, \code{pen},
+and columns included in param \code{hand_nest_colnames}}
 
 \item{from, to}{\code{Date} or \code{character(1)}, optional date range.}
+
+\item{hand_nest_colnames}{Column names for nests per pen (default: \verb{Nest1, Nest2, Nest3, Nest4}).}
 
 \item{Nestnumbers}{Sequence of valid nest numbers (default: \code{1:64}).}
 
@@ -34,6 +37,8 @@ find_best_ot_min(
 \item{timezone}{Time zone used for datetime conversion (default: \code{"Europe/Berlin"}).}
 
 \item{collect_min}{Total time needed for egg collection (default: 20).}
+
+\item{fakeegg}{TRUE/FALSE, if manual transponder for precise time record is available.}
 }
 \value{
 A \code{data.table} with tested offsets and their match proportions.
