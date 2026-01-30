@@ -117,8 +117,8 @@ Make_pen_number <- function(meta, Nestnumbers, num_per_pen, verbose = TRUE) {
 #' nest system data to generate a harmonized table for evaluating egg count accuracy.
 #'
 #' @param meta A `data.table` containing autonest data after prep_data.
-#' @param hand `data.table` containing hand-count egg data, required columns: `Date`, `Time_end`, `pen`,
-#' and columns included in param `hand_nest_colnames`
+#' @param hand `data.table` containing hand-count egg data, required columns: `Date`(format yyyy-mm-dd), 
+#' `Time_end`(format hh:mm:ss), `pen`, `Nfloor`, and columns included in param `hand_nest_colnames`
 #' @param from,to `Date` or `character(1)`, optional date range.
 #' @param hand_nest_colnames Column names for nests per pen (default: `Nest1, Nest2, Nest3, Nest4`).
 #' @param Nestnumbers Vector of nest numbers (default: `1:64`).
@@ -151,7 +151,7 @@ get_good_hand_eggcount <- function(meta, hand, from = NULL, to = NULL,
   if (!inherits(meta, "data.table")) stop("`meta` must be a data.table")
   if (!inherits(hand, "data.table")) stop("`hand` must be a data.table")
   check_required_cols(meta, c("Date", "pen", "Nestnumber", "Eggsignal", "Transponder", "End", "F_combined", "datelay"))
-  check_required_cols(hand, c("Date", "Time_end", "Pen", hand_nest_colnames))
+  check_required_cols(hand, c("Date", "Time_end", "Pen", "Nfloor", hand_nest_colnames))
   warning("Make sure the format of Date in hand is yyyy-mm-dd(e.g.'2024-01-01') and the Time in hand is hh:mm:ss(e.g.'10:25:00')")
   
   Nestnumbers <- as.numeric(Nestnumbers)
@@ -336,8 +336,8 @@ get_good_hand_eggcount <- function(meta, hand, from = NULL, to = NULL,
 #' maximizes matches between automatic nest records and manually collected hand-count data.
 #'
 #' @param meta_ori A `data.table` objects containing raw AutoNest data before prep_data().
-#' @param hand `data.table` containing hand-count egg data, required columns: `Date`, `Time_end`, `pen`,
-#' and columns included in param `hand_nest_colnames`
+#' @param hand `data.table` containing hand-count egg data, required columns: `Date`(format yyyy-mm-dd), 
+#' `Time_end`(format hh:mm:ss), `pen`, `Nfloor`, and columns included in param `hand_nest_colnames`
 #' @param from,to `Date` or `character(1)`, optional date range.
 #' @param hand_nest_colnames Column names for nests per pen (default: `Nest1, Nest2, Nest3, Nest4`).
 #' @param Nestnumbers Sequence of valid nest numbers (default: `1:64`).
