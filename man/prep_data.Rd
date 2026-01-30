@@ -4,12 +4,22 @@
 \alias{prep_data}
 \title{Prepare autonest laying data}
 \usage{
-prep_data(meta, ot_min = NULL)
+prep_data(
+  meta_ori,
+  ot_min = NULL,
+  dateformat = "\%d.\%m.\%Y",
+  from = NULL,
+  to = NULL
+)
 }
 \arguments{
-\item{meta}{A \code{data.table} containing raw autonest data.}
-
 \item{ot_min}{How many minutes to correct for the autonest clock (default NULL).}
+
+\item{dateformat}{Date format in meta (default "\%d.\%m.\%Y").}
+
+\item{from, to}{\code{Date} or \code{character(1)}, optional date range (format yyyy-mm-dd.}
+
+\item{meta}{A \code{data.table} containing raw autonest data.}
 }
 \value{
 A \code{data.table} with cleaned time/date columns (\code{hms}/\code{Date}), and

@@ -875,7 +875,7 @@ process_pen <- function(p, negg, meta, ani_info,
     pendate_negg <- pen_negg[Date == date]
     
     # Candidate animals in pen
-    warning("Make sure the format of Date in ani_info is yyyy-mm-dd(e.g.'2024-01-01')")
+    check_date(ani_info$Leave)
     ani_info[, Leave := as.Date(Leave)]
     cand_ani <- ani_info[Pen == p & Leave >= date, ani]
     
@@ -1105,7 +1105,7 @@ CV_pen <- function(pen_trusted_dat, reps = 2, k = 5, seed = 123,
         pendate_negg <- pen_negg[Date == date]
         
         # Candidate animals in pen
-        warning("Make sure the format of Date in ani_info is yyyy-mm-dd(e.g.'2024-01-01')")
+        check_date(ani_info$Leave)
         ani_info[, Leave := as.Date(Leave)]
         cand_ani <- ani_info[Pen == p & Leave >= date, ani]
         

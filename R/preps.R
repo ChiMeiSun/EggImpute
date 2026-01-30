@@ -10,14 +10,22 @@ NULL
 #'
 #' @param meta A `data.table` containing raw autonest data.
 #' @param ot_min How many minutes to correct for the autonest clock (default NULL).
-#'
+#' @param dateformat Date format in meta (default "%d.%m.%Y").
+#' @param from,to `Date` or `character(1)`, optional date range (format yyyy-mm-dd.
+#' 
 #' @return A `data.table` with cleaned time/date columns (`hms`/`Date`), and 
 #'   additional columns: `ani` and `type`.
 #' @export
 #'
-prep_data <- function(meta, ot_min = NULL) {
-  if (!inherits(meta, "data.table")) stop("`meta` must be a data.table")
+prep_data <- function(meta_ori, 
+                      ot_min = NULL, 
+                      dateformat = "%d.%m.%Y",
+                      from = NULL, to = NULL) {
+  if (!inherits(meta_ori, "data.table")) stop("`meta` must be a data.table")
+  check_date(from)
+  check_date(to)
   
+  meta <- data.table::copy(meta_ori)
   # Clean column names
   setnames(meta, gsub(" ", "", names(meta)))
   
@@ -32,7 +40,20 @@ prep_data <- function(meta, ot_min = NULL) {
     ot_min <- hms::as_hms(ot_min * 60)
   }
   
-  # Make time & date format
+  # Make date & time format
+  meta[, Date := as.Date(Date, format = dateformat)]
+  if (any(is.na(meta$Date))) stop ("as.Date() failed! maybe dateformat is wrong!")
+  meta[lubridate::year(Date) < 100, Date := update(Date, year = lubridate::year(Date) + 2000)]
+  
+  if (!is.null(from)) {
+    cat("subsetting data: Date >= ", as.character(from), "\n")
+    meta <- meta[Date >= as.Date(from)]
+  }
+  if (!is.null(to)) {
+    cat("subsetting data: Date <= ", as.character(to), "\n")
+    meta <- meta[Date <= as.Date(to)]
+  }
+  
   time_cols <- c("Start", "End", "Duration", "Layingtime")
   
   # Make empty time as NA
@@ -49,8 +70,7 @@ prep_data <- function(meta, ot_min = NULL) {
     meta[, (time_cols) := lapply(.SD, function(x) hms::as_hms(x + ot_min)), .SDcols = time_cols]
   }
   
-  meta[, Date := as.Date(Date, format = "%d.%m.%Y")]
-  meta[lubridate::year(Date) < 100, Date := update(Date, year = lubridate::year(Date) + 2000)]
+
   
   # Mark ani & pri/sec animals
   meta[, ani := Animalmark]
@@ -119,7 +139,7 @@ Make_pen_number <- function(meta, Nestnumbers, num_per_pen, verbose = TRUE) {
 #' @param meta A `data.table` containing autonest data after prep_data.
 #' @param hand `data.table` containing hand-count egg data, required columns: `Date`(format yyyy-mm-dd), 
 #' `Time_end`(format hh:mm:ss), `pen`, `Nfloor`, and columns included in param `hand_nest_colnames`
-#' @param from,to `Date` or `character(1)`, optional date range.
+#' @param from,to `Date` or `character(1)`, optional date range (format yyyy-mm-dd.
 #' @param hand_nest_colnames Column names for nests per pen (default: `Nest1, Nest2, Nest3, Nest4`).
 #' @param Nestnumbers Vector of nest numbers (default: `1:64`).
 #' @param num_per_pen Number of nests per pen (default: 4).
@@ -152,7 +172,10 @@ get_good_hand_eggcount <- function(meta, hand, from = NULL, to = NULL,
   if (!inherits(hand, "data.table")) stop("`hand` must be a data.table")
   check_required_cols(meta, c("Date", "pen", "Nestnumber", "Eggsignal", "Transponder", "End", "F_combined", "datelay"))
   check_required_cols(hand, c("Date", "Time_end", "Pen", "Nfloor", hand_nest_colnames))
-  warning("Make sure the format of Date in hand is yyyy-mm-dd(e.g.'2024-01-01') and the Time in hand is hh:mm:ss(e.g.'10:25:00')")
+  check_date(hand$Date)
+  check_time(hand$Time_end)
+  check_date(from)
+  check_date(to)
   
   Nestnumbers <- as.numeric(Nestnumbers)
   minnest <- min(Nestnumbers)
@@ -338,7 +361,7 @@ get_good_hand_eggcount <- function(meta, hand, from = NULL, to = NULL,
 #' @param meta_ori A `data.table` objects containing raw AutoNest data before prep_data().
 #' @param hand `data.table` containing hand-count egg data, required columns: `Date`(format yyyy-mm-dd), 
 #' `Time_end`(format hh:mm:ss), `pen`, `Nfloor`, and columns included in param `hand_nest_colnames`
-#' @param from,to `Date` or `character(1)`, optional date range.
+#' @param from,to `Date` or `character(1)`, optional date range (format yyyy-mm-dd.
 #' @param hand_nest_colnames Column names for nests per pen (default: `Nest1, Nest2, Nest3, Nest4`).
 #' @param Nestnumbers Sequence of valid nest numbers (default: `1:64`).
 #' @param num_per_pen Number of nests per pen (default: 4).

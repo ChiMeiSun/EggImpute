@@ -20,10 +20,10 @@ get_good_hand_eggcount(
 \arguments{
 \item{meta}{A \code{data.table} containing autonest data after prep_data.}
 
-\item{hand}{\code{data.table} containing hand-count egg data, required columns: \code{Date}, \code{Time_end}, \code{pen},
-and columns included in param \code{hand_nest_colnames}}
+\item{hand}{\code{data.table} containing hand-count egg data, required columns: \code{Date}(format yyyy-mm-dd),
+\code{Time_end}(format hh:mm:ss), \code{pen}, \code{Nfloor}, and columns included in param \code{hand_nest_colnames}}
 
-\item{from, to}{\code{Date} or \code{character(1)}, optional date range.}
+\item{from, to}{\code{Date} or \code{character(1)}, optional date range (format yyyy-mm-dd.}
 
 \item{hand_nest_colnames}{Column names for nests per pen (default: \verb{Nest1, Nest2, Nest3, Nest4}).}
 

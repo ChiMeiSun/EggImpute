@@ -1,4 +1,5 @@
 #' @import data.table
+#' @import hms
 NULL
 
 #' Check for required columns in a data.table
@@ -84,7 +85,47 @@ check_datetime <- function(input) {
   invisible(TRUE)
 }
 
+#' Validate date is in yyyy-mm-dd format
+#'
+#' Checks if input is a valid date in the format YYYY-MM-DD.
+#' #' 
+#' @param input Character string or Date
+#'
+#' @return Invisible TRUE if the input passes the check.
+#' @export
+#'
+check_date <- function(input) {
+  if (inherits(input, "Date")) {
+  } else {
+    date <- tryCatch(
+    as.Date(input),
+    error = function(e) {
+      stop(sprintf("Invalid date '%s', must be in yyyy-mm-dd", input))
+    })
+  }
+  invisible(TRUE)
+}
 
+#' Validate time is in hh:mm:ss format
+#'
+#' Checks if input is a valid time in the format hh:mm:ss.
+#' #' 
+#' @param input Character string or hms
+#'
+#' @return Invisible TRUE if the input passes the check.
+#' @export
+#'
+check_time <- function(input) {
+  if (inherits(input, "hms")) {
+  } else {
+    date <- tryCatch(
+      hms::as_hms(input),
+      error = function(e) {
+        stop(sprintf("Invalid time '%s', must be in hh:mm:ss", input))
+      })
+  }
+  invisible(TRUE)
+}
 #' Plot laying pattern of a single animal
 #'
 #' Visualizes the laying times of a given animal across dates, highlighting flagged eggs.
