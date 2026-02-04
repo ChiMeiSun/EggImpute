@@ -447,7 +447,7 @@ find_best_ot_min <- function(meta_ori, hand, from = NULL, to = NULL,
                                      timezone, collect_min, fakeegg = fakeegg)
     tegg_m <- tegg_m[Pen != 16]
     tegg_m[, diff_ah := Nauto_filt - Nhand]
-    prop_match <- max(table(tegg_m$diff_ah == 0) / nrow(tegg_m))
+    prop_match <- sum(tegg_m$diff_ah == 0) / nrow(tegg_m)
     
     best_fit <- rbind(best_fit, data.table(ot_min = ot, prop_match = prop_match))
   }
