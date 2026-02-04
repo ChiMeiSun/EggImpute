@@ -842,6 +842,7 @@ process_pen <- function(p, negg, meta, ani_info,
   if (!norm_result %in% c("prob", "assign")) {
     stop("Argument 'result' must be either 'prob' or 'assign'")
   }
+  message("flat = TRUE, ignore norm_result, computing flat (equal) priors")
   
   check_required_cols(negg, c("Date", "Pen", "Nest", "Nhand", "Nfloor", "date_time_pre", "date_time"))
   check_required_cols(meta, c("ani", "pen", "datelay", "Eggsignal", "F_combined", "type", "pri_count", "laydiffh_pre_pri", "Nestnumber"))
@@ -917,7 +918,6 @@ process_pen <- function(p, negg, meta, ani_info,
     prior <- make_naive_prior(eggs$eggid, cand_ani)
     
     if (flat == TRUE) {
-      message("flat = TRUE, ignore norm_result, computing flat (equal) priors")
       prior = prior
       
     } else {
