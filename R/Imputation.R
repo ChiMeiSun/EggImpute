@@ -918,7 +918,7 @@ process_pen <- function(p, negg, meta, ani_info,
     prior <- make_naive_prior(eggs$eggid, cand_ani)
     
     if (flat == TRUE) {
-      prior = prior
+      prior <- prior
       
     } else {
       # Update by laydates (+imputed) based on laying pattern throughout the period
