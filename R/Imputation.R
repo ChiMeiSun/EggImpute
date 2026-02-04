@@ -1149,7 +1149,6 @@ CV_pen <- function(pen_trusted_dat, reps = 2, k = 5, seed = 123,
         
         # Mark down the trust rows which will be masked
         masked_rows <- dt_trust[mask_info, on = .(eid, ani), nomatch = NULL]
-        
         if (nrow(masked_rows) == 0) {
           next
         }
@@ -1217,6 +1216,8 @@ CV_pen <- function(pen_trusted_dat, reps = 2, k = 5, seed = 123,
         masked_rows[topx, on = .(ani, nest), 
                     `:=`(topx = TRUE, prior = i.prior)
         ][is.na(topx), topx := FALSE][, rep := r]
+        # rm dup cols
+        names(masked_rows) <- gsub("^i\\.", "", names(masked_rows))
         
         masked_res[[length(masked_res) + 1]] <- masked_rows
       }
