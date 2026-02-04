@@ -917,6 +917,7 @@ process_pen <- function(p, negg, meta, ani_info,
     prior <- make_naive_prior(eggs$eggid, cand_ani)
     
     if (flat == TRUE) {
+      message("flat = TRUE, ignore norm_result, computing flat (equal) priors")
       prior = prior
     } else {
       # Update by laydates (+imputed) based on laying pattern throughout the period
