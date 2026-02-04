@@ -1,6 +1,7 @@
 .onAttach <- function(libname, pkgname) {
+  desc <- utils::packageDescription(pkgname)
   packageStartupMessage(
-    "Welcome to EggImpute v0.1.0\n",
+    paste0("Welcome to EggImpute ", desc$Version, "\n"),
     "For documentation: help(package = 'EggImpute')"
   )
 }
