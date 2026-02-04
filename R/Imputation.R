@@ -919,6 +919,7 @@ process_pen <- function(p, negg, meta, ani_info,
     if (flat == TRUE) {
       message("flat = TRUE, ignore norm_result, computing flat (equal) priors")
       prior = prior
+      
     } else {
       # Update by laydates (+imputed) based on laying pattern throughout the period
       prior <- update_prior_laydates(prior, ani_impeggs, from, to, date, pen_meta,
