@@ -288,41 +288,32 @@ get_sumprob <- function(res_list) {
   }))
 }
 
-#' Get prob/assign results per egg from function "process_pen"
+#' Get posterior probabilities per egg from function "process_pen"
 #'
-#' @param res_list A list contains both or either "prob" and "assign" output
+#' @param res_list A list contains "pen_priors" and "pen_trusted" output by pen
 #'
 #' @return A data.table of results, `eid`(egg id), `ani`, `prior`, `pen`, `Date`, `type`(prob/assign)
 #' @export
 #'
-get_prob <- function(res_list, type = "prob") {
-  if (! type %in% c("prob", "assign")) {
-    stop("type must be either 'prob' or 'assign'")
-  }
-  
-  
-  data.table::rbindlist(lapply(type, function(type_name) {
-    pen_res <- res_list[[type]]$pen_res
-    
-    tmp <- data.table::rbindlist(lapply(pen_res, function(pen) {
-      pen$pen_priors
-    }))
-    tmp[, date := as.Date(substr(eid, 1,6), format = "%y%m%d")]
-    tmp[, type := type_name]
-    tmp
+get_prob <- function(res_list) {
+  tmp <- data.table::rbindlist(lapply(res_list, function(pen) {
+    pen$pen_priors
   }))
+  tmp[, date := as.Date(substr(eid, 1,6), format = "%y%m%d")]
+  tmp
 }
+
 
 #' Get trusted set from function "process_pen"
 #'
-#' @param res_list A list contains both or either "prob" and "assign" output
+#' @param res_list A list contains "pen_priors" and "pen_trusted" output by pen
 #'
 #' @return A data.table of results,`eid`(egg id), `ani`, `layingtime`(from autonest) 
 #' `type`(primary/secondary), `date`, `pen`, `fold`(if CV=TRUE)
 #' @export
 #'
 get_trusted <- function(res_list) {
-  data.table::rbindlist(lapply(res_list[[names(res_list)[1] ]]$pen_res, function(pen) {
+  data.table::rbindlist(lapply(res_list, function(pen) {
     pen$pen_trusted
   }))
 }
@@ -331,48 +322,59 @@ get_trusted <- function(res_list) {
 
 #' Get prob/assign results as a `[date x ani]` matrix
 #'
-#' @param res_list A list contains both or either "prob" and "assign" output
+#' @param res_list A list contains "pen_priors" and "pen_trusted" output by pen
 #'
 #' @return A matrix of results `[date x ani]`
 #' @export
 #'
-get_matrix <- function(res_list, type = "assign") {
-  if (! type %in% c("prob", "assign")) {
+get_matrix <- function(res_list, type = NULL) {
+  if (missing(type)) {
+    stop("Argument 'type' is required")
+  }
+  if (!type %in% c("prob", "assign")) {
     stop("type must be either 'prob' or 'assign'")
   }
-  if (!type %in% names(res_list)) stop(type, " is not found in the result list")
       
-      
+  
   if (type == "prob") {
-    respp <- get_prob(res_list, type = "prob")
+    respp <- get_prob(res_list)
     
     respp <- respp[, .(
       sump = sum(prior, na.rm = TRUE),
       # Keep other columns from first row
       prior = first(prior)
     ), by = .(ani, date)]
-    if (nrow(respp[prior > sump]) > 0 ) warning("Something is wrong when type = prob (prior > sump)")
+    
+    if (nrow(respp[prior > sump]) > 0 ) warning("Something is wrong when type = prob (prior > sum_prior)")
+    
     respp[, prior := round(sump, 2)]
     
-    } else {
-    respp <- get_prob(res_list, type = "assign")
+  } else {
+    respp <- get_prob(res_list)
   }
   
   restt <- get_trusted(res_list)
   
-  # check
+  # check dups
   check <- respp[, .N, by = .(date, ani)][N>1]
   if (nrow(check) > 0 ) warning("More than one egg per day for an animal is detected!")
   c1 <- respp[, .N, by = .(date, ani)]
   c2 <- restt[, .N, by = .(date, ani)]
   check <- merge(c1, c2, by = c("date", "ani"))
   if (nrow(check) > 0 ) warning("More than one egg per day for an animal is detected!")
-  #
+  
+  # matrix
   all <- merge(respp, restt, by = c("date", "ani"), all = TRUE)
   all[is.na(prior), prior := 1]
   resmatrix <- data.table::dcast(all, date ~ ani, 
                      value.var = "prior",
-                     fill = 0)
+                     fill = 0,
+                     fun.aggregate = sum)
+  
+  if (any(resmatrix[, -1] > 1)) {
+    warning("Found duplicate date/ani combinations with prior > 1")
+  }
+  
   message("Got the result matrix for type =", type, "\n")
   resmatrix
 }

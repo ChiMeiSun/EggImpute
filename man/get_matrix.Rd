@@ -4,10 +4,10 @@
 \alias{get_matrix}
 \title{Get prob/assign results as a \verb{[date x ani]} matrix}
 \usage{
-get_matrix(res_list, type = "assign")
+get_matrix(res_list, type = NULL)
 }
 \arguments{
-\item{res_list}{A list contains both or either "prob" and "assign" output}
+\item{res_list}{A list contains "pen_priors" and "pen_trusted" output by pen}
 }
 \value{
 A matrix of results \verb{[date x ani]}

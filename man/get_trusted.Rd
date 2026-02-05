@@ -7,7 +7,7 @@
 get_trusted(res_list)
 }
 \arguments{
-\item{res_list}{A list contains both or either "prob" and "assign" output}
+\item{res_list}{A list contains "pen_priors" and "pen_trusted" output by pen}
 }
 \value{
 A data.table of results,\code{eid}(egg id), \code{ani}, \code{layingtime}(from autonest)
