@@ -644,7 +644,7 @@ get_trusted_autonest <- function(eggs, pen_meta, from, to) {
     if (neggs < nani) {
       pri_anis <- autofilt_ani[Nestnumber == n & type == "pri", ani]
       npri <- length(pri_anis)
-      if (neggs < npri) {
+      if (neggs <= npri) {
         pri_anis <- autofilt_ani[ani %in% pri_anis][order(laydiffh_pre_pri)][seq_len(neggs), ani]
       }
       
@@ -653,12 +653,12 @@ get_trusted_autonest <- function(eggs, pen_meta, from, to) {
 
       ani_id <- c(ani_id, pri_anis, sec_ani_keep)
       eid <- c(eid, eggs[Nest == n, eggid])
-      date <- c(date, autofilt_ani[ani %in% pri_anis, Date])
-      date <- c(date, autofilt_ani[ani %in% sec_ani_keep, Date])
-      laytime <- c(laytime, autofilt_ani[ani %in% pri_anis, Layingtime])
-      laytime <- c(laytime, autofilt_ani[ani %in% sec_ani_keep, Layingtime])
-      type <- c(type, autofilt_ani[ani %in% pri_anis, type])
-      type <- c(type, autofilt_ani[ani %in% sec_ani_keep, type])
+      date <- c(date, autofilt_ani[Nestnumber == n & ani %in% pri_anis, Date])
+      date <- c(date, autofilt_ani[Nestnumber == n & ani %in% sec_ani_keep, Date])
+      laytime <- c(laytime, autofilt_ani[Nestnumber == n & ani %in% pri_anis, Layingtime])
+      laytime <- c(laytime, autofilt_ani[Nestnumber == n & ani %in% sec_ani_keep, Layingtime])
+      type <- c(type, autofilt_ani[Nestnumber == n & ani %in% pri_anis, type])
+      type <- c(type, autofilt_ani[Nestnumber == n & ani %in% sec_ani_keep, type])
       
     } else if (neggs > nani) {
       ani_id <- c(ani_id, autofilt_ani[Nestnumber == n, ani])
@@ -679,5 +679,8 @@ get_trusted_autonest <- function(eggs, pen_meta, from, to) {
   }
   
   trusted <- data.table(eid = eid, ani = ani_id, date = as.Date(date), layingtime = hms::as_hms(laytime), type = type)
+  if (nrow(trusted[, .N, by = eid][N>1]) > 0) stop("Trusted dt has assigned duplicated eggs! Check code")
+  
+  
   return(trusted)
 }

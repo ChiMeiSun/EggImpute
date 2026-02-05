@@ -329,29 +329,23 @@ get_matrix <- function(res_list, type = NULL) {
   if (missing(type)) {
     stop("Argument 'type' is required")
   }
-  if (!type %in% c("prob", "assign")) {
-    stop("type must be either 'prob' or 'assign'")
+  if (!type %in% c("prob", "assign", "flat")) {
+    stop("type must be either 'prob', 'flat' or 'assign'")
   }
       
   
-  if (type == "prob") {
-    respp <- get_prob(res_list)
-    respp[, tmpid := substr(eid,1,6)]
-    
-    respp <- respp[, .(
-      sump = sum(prior, na.rm = TRUE),
-      # Keep other columns from first row
-      prior = first(prior)
-    ), by = .(ani, tmpid)]
-    
-    if (nrow(respp[prior > sump]) > 0 ) warning("Something is wrong when type = prob (prior > sum_prior)")
-    
-    respp[, prior := round(sump, 2)]
-    
-  } else {
-    respp <- get_prob(res_list)
-  }
+  respp <- get_prob(res_list)
+  respp[, tmpid := substr(eid,1,6)]
   
+  respp <- respp[, .(
+    sump = sum(prior, na.rm = TRUE),
+    # Keep other columns from first row
+    prior = first(prior)
+  ), by = .(ani, tmpid)]
+  
+  respp[, prior := round(sump, 2)]
+    
+
   restt <- get_trusted(res_list)
   restt[, tmpid := substr(eid,1,6)]
   
