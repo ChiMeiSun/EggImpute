@@ -633,6 +633,7 @@ get_trusted_autonest <- function(eggs, pen_meta, from, to) {
   
   ani_id <- c()
   eid <- c()
+  date <- c()
   laytime <- c()
   type <- c()
   
@@ -652,6 +653,8 @@ get_trusted_autonest <- function(eggs, pen_meta, from, to) {
 
       ani_id <- c(ani_id, pri_anis, sec_ani_keep)
       eid <- c(eid, eggs[Nest == n, eggid])
+      date <- c(date, autofilt_ani[ani %in% pri_anis, Date])
+      date <- c(date, autofilt_ani[ani %in% sec_ani_keep, Date])
       laytime <- c(laytime, autofilt_ani[ani %in% pri_anis, Layingtime])
       laytime <- c(laytime, autofilt_ani[ani %in% sec_ani_keep, Layingtime])
       type <- c(type, autofilt_ani[ani %in% pri_anis, type])
@@ -660,11 +663,13 @@ get_trusted_autonest <- function(eggs, pen_meta, from, to) {
     } else if (neggs > nani) {
       ani_id <- c(ani_id, autofilt_ani[Nestnumber == n, ani])
       eid <- c(eid, eggs[Nest == n, eggid][seq_len(nani)])
+      date <- c(date, autofilt_ani[Nestnumber == n, Date])
       laytime <- c(laytime, autofilt_ani[Nestnumber == n, Layingtime])
       type <- c(type, autofilt_ani[Nestnumber == n, type])
     } else {
       ani_id <- c(ani_id, autofilt_ani[Nestnumber == n, ani])
       eid <- c(eid, eggs[Nest == n, eggid])
+      date <- c(date, autofilt_ani[Nestnumber == n, Date])
       laytime <- c(laytime, autofilt_ani[Nestnumber == n, Layingtime])
       type <- c(type, autofilt_ani[Nestnumber == n, type])
     }
@@ -673,6 +678,6 @@ get_trusted_autonest <- function(eggs, pen_meta, from, to) {
     autofilt_ani <- autofilt_ani[!ani %in% ani_id]
   }
   
-  trusted <- data.table(eid = eid, ani = ani_id, layingtime = hms::as_hms(laytime), type = type)
+  trusted <- data.table(eid = eid, ani = ani_id, date = as.Date(date), layingtime = hms::as_hms(laytime), type = type)
   return(trusted)
 }
