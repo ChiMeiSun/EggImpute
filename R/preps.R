@@ -354,7 +354,9 @@ get_good_hand_eggcount <- function(meta, hand, from = NULL, to = NULL,
     }, by = Date]
     
     fakeegg[, End_filled := hms::as_hms(End_filled_sec)]
-    fakeegg[, dtm_a := as.POSIXct(paste(Date, End_filled), format = "%Y-%m-%d %H:%M:%S", tz = "Europe/Berlin")]
+    fakeegg[, dtm_a := as.POSIXct(
+      sprintf("%s %s", Date, End_filled),
+      format = "%Y-%m-%d %H:%M:%S", tz = timezone)]
     fakeegg[, c("End", "End_sec", "End_filled_sec", "End_filled") := NULL]
     
     # Merge fake egg datetime
@@ -363,11 +365,15 @@ get_good_hand_eggcount <- function(meta, hand, from = NULL, to = NULL,
                        by.y = c("Date", "pen", "Nestnumber"),
                        all = TRUE)
     
-    tegg_hand[, dtm_h := as.POSIXct(paste(Date, Time_end), format = "%Y-%m-%d %H:%M:%S", tz = "Europe/Berlin")]
+    tegg_hand[, dtm_h := as.POSIXct(
+      sprintf("%s %s", Date, Time_end), 
+      format = "%Y-%m-%d %H:%M:%S", tz = timezone)]
     tegg_hand[!is.na(dtm_a), dtm_h := dtm_a]
   } else {
     tegg_hand <- hand_long
-    tegg_hand[, dtm_h := as.POSIXct(paste(Date, Time_end), format = "%Y-%m-%d %H:%M:%S", tz = "Europe/Berlin")]
+    tegg_hand[, dtm_h := as.POSIXct(
+      sprintf("%s %s", Date, Time_end), 
+      format = "%Y-%m-%d %H:%M:%S", tz = timezone)]
   }
   
   setorder(tegg_hand, Pen, Nest, dtm_h)
@@ -512,7 +518,9 @@ Add_filter_flag <- function(meta,
   
   # 4 (flag only "sec" eggs) with laying time diff < thrd
   thrd <- thrd_laydiff
-  meta[, datelay := as.POSIXct(paste(Date, Layingtime), format = "%Y-%m-%d %H:%M:%S", tz = timezone)]
+  meta[, datelay := as.POSIXct(
+    sprintf("%s %s", Date, Layingtime), 
+    format = "%Y-%m-%d %H:%M:%S", tz = timezone)]
   setorder(meta, ani, datelay)
   
   meta[Eggsignal > 0,
@@ -613,12 +621,12 @@ get_trusted_autonest <- function(eggs, pen_meta, from, to) {
   if (!identical(attr(from, "tzone"), attr(pen_meta$datelay, "tzone"))) {
     warning("'from' and 'pen_meta$datelay' do NOT have the same timezone. 
          Current: from = ", attr(from, "tzone"), 
-            ", pen_meta$datelay = ", attr(to, "tzone"))
+            ", pen_meta$datelay = ", attr(pen_meta$datelay, "tzone"))
   }
   if (!identical(attr(to, "tzone"), attr(pen_meta$datelay, "tzone"))) {
     warning("'to' and 'pen_meta$datelay' do NOT have the same timezone. 
-         Current: to = ", attr(from, "tzone"), 
-            ", pen_meta$datelay = ", attr(to, "tzone"))
+         Current: to = ", attr(to, "tzone"), 
+            ", pen_meta$datelay = ", attr(pen_meta$datelay, "tzone"))
   }
   
   autofilt_ani <- pen_meta[
@@ -650,16 +658,16 @@ get_trusted_autonest <- function(eggs, pen_meta, from, to) {
       
       sec_quota <- max(0, neggs - npri)
       sec_ani_keep <- autofilt_ani[Nestnumber == n & type == "sec"][order(-pri_count)][seq_len(sec_quota), ani]
-
-      ani_id <- c(ani_id, pri_anis, sec_ani_keep)
-      eid <- c(eid, eggs[Nest == n, eggid])
-      date <- c(date, autofilt_ani[Nestnumber == n & ani %in% pri_anis, Date])
-      date <- c(date, autofilt_ani[Nestnumber == n & ani %in% sec_ani_keep, Date])
-      laytime <- c(laytime, autofilt_ani[Nestnumber == n & ani %in% pri_anis, Layingtime])
-      laytime <- c(laytime, autofilt_ani[Nestnumber == n & ani %in% sec_ani_keep, Layingtime])
-      type <- c(type, autofilt_ani[Nestnumber == n & ani %in% pri_anis, type])
-      type <- c(type, autofilt_ani[Nestnumber == n & ani %in% sec_ani_keep, type])
       
+      ps_anis <- c(pri_anis, sec_ani_keep)
+
+      ani_id <- c(ani_id, ps_anis)
+      eid <- c(eid, eggs[Nest == n, eggid])
+      
+      date <- c(date, autofilt_ani[Nestnumber == n & ani %in% ps_anis, Date][1:length(ps_anis)])
+      laytime <- c(laytime, autofilt_ani[Nestnumber == n & ani %in% ps_anis, Layingtime][1:length(ps_anis)])
+      type <- c(type, autofilt_ani[Nestnumber == n & ani %in% ps_anis, type][1:length(ps_anis)])
+
     } else if (neggs > nani) {
       ani_id <- c(ani_id, autofilt_ani[Nestnumber == n, ani])
       eid <- c(eid, eggs[Nest == n, eggid][seq_len(nani)])
@@ -679,6 +687,7 @@ get_trusted_autonest <- function(eggs, pen_meta, from, to) {
   }
   
   trusted <- data.table(eid = eid, ani = ani_id, date = as.Date(date), layingtime = hms::as_hms(laytime), type = type)
+  
   if (nrow(trusted[, .N, by = eid][N>1]) > 0) {
     warning("Trusted dt has assigned duplicated eggs! Check code")
   }

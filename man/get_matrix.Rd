@@ -4,7 +4,7 @@
 \alias{get_matrix}
 \title{Get prob/assign results as a \verb{[date x ani]} matrix}
 \usage{
-get_matrix(res_list, type = NULL)
+get_matrix(res_list)
 }
 \arguments{
 \item{res_list}{A list contains "pen_priors" and "pen_trusted" output by pen}

@@ -325,15 +325,8 @@ get_trusted <- function(res_list) {
 #' @return A matrix of results `[date x ani]`
 #' @export
 #'
-get_matrix <- function(res_list, type = NULL) {
-  if (missing(type)) {
-    stop("Argument 'type' is required")
-  }
-  if (!type %in% c("prob", "assign", "flat")) {
-    stop("type must be either 'prob', 'flat' or 'assign'")
-  }
-      
-  
+get_matrix <- function(res_list) {
+
   respp <- get_prob(res_list)
   respp[, tmpid := substr(eid,1,6)]
   
@@ -353,7 +346,7 @@ get_matrix <- function(res_list, type = NULL) {
   check <- respp[, .N, by = .(tmpid, ani)][N>1]
   if (nrow(check) > 0 ) warning("More than one egg per day for an animal is detected in probability dt!")
 
-  check <- restt[, .N, by = .(tmpid, ani)][N>1]
+  check <- restt[, .N, by = .(eid, ani)][N>1]
   if (nrow(check) > 0 ) warning("More than one egg per day for an animal is detected in trusted dt!")
   
   c1 <- respp[, .N, by = .(tmpid, ani)]
@@ -375,7 +368,6 @@ get_matrix <- function(res_list, type = NULL) {
     warning("Found duplicate date/ani combinations with prior > 1")
   }
   
-  message("Got the result matrix for type =", type, "\n")
   resmatrix
 }
 
