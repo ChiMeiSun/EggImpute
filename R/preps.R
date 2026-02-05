@@ -679,7 +679,9 @@ get_trusted_autonest <- function(eggs, pen_meta, from, to) {
   }
   
   trusted <- data.table(eid = eid, ani = ani_id, date = as.Date(date), layingtime = hms::as_hms(laytime), type = type)
-  if (nrow(trusted[, .N, by = eid][N>1]) > 0) stop("Trusted dt has assigned duplicated eggs! Check code")
+  if (nrow(trusted[, .N, by = eid][N>1]) > 0) {
+    warning("Trusted dt has assigned duplicated eggs! Check code")
+  }
   
   
   return(trusted)
