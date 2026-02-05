@@ -629,7 +629,7 @@ get_trusted_autonest <- function(eggs, pen_meta, from, to) {
   ]
   
   nestorder <- autofilt_ani[, .N, by = .(Nestnumber, type)][
-    order(type, N), unique(Nestnumber)]
+    order(type, N, Nestnumber), unique(Nestnumber)]
   
   ani_id <- c()
   eid <- c()
@@ -643,17 +643,19 @@ get_trusted_autonest <- function(eggs, pen_meta, from, to) {
     if (neggs < nani) {
       pri_anis <- autofilt_ani[Nestnumber == n & type == "pri", ani]
       npri <- length(pri_anis)
-      
-      sec_quota <- max(0, neggs - npri)
-      sec_ani_keep <- autofilt_ani[Nestnumber == n & type == "sec"][order(-pri_count)][seq_len(sec_quota), ani]
-      
       if (neggs < npri) {
         pri_anis <- autofilt_ani[ani %in% pri_anis][order(laydiffh_pre_pri)][seq_len(neggs), ani]
       }
+      
+      sec_quota <- max(0, neggs - npri)
+      sec_ani_keep <- autofilt_ani[Nestnumber == n & type == "sec"][order(-pri_count)][seq_len(sec_quota), ani]
+
       ani_id <- c(ani_id, pri_anis, sec_ani_keep)
       eid <- c(eid, eggs[Nest == n, eggid])
       laytime <- c(laytime, autofilt_ani[ani %in% pri_anis, Layingtime])
+      laytime <- c(laytime, autofilt_ani[ani %in% sec_ani_keep, Layingtime])
       type <- c(type, autofilt_ani[ani %in% pri_anis, type])
+      type <- c(type, autofilt_ani[ani %in% sec_ani_keep, type])
       
     } else if (neggs > nani) {
       ani_id <- c(ani_id, autofilt_ani[Nestnumber == n, ani])

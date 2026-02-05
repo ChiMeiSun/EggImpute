@@ -950,7 +950,7 @@ process_pen <- function(p, negg, meta, ani_info,
       pen_priors[[length(pen_priors) + 1]] <- prior
     }
     if (nrow(dt_trust) > 0) {
-      pen_trusted[[length(pen_trusted) + 1]] <- data.table(dt_trust, date, pen = p)
+      pen_trusted[[length(pen_trusted) + 1]] <- data.table(dt_trust, pen = p)
     }
   }
   
