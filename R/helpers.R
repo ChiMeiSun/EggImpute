@@ -296,11 +296,9 @@ get_sumprob <- function(res_list) {
 #' @export
 #'
 get_prob <- function(res_list) {
-  tmp <- data.table::rbindlist(lapply(res_list, function(pen) {
+  data.table::rbindlist(lapply(res_list, function(pen) {
     pen$pen_priors
   }))
-  tmp[, date := as.Date(substr(eid, 1,6), format = "%y%m%d")]
-  tmp
 }
 
 
@@ -338,12 +336,13 @@ get_matrix <- function(res_list, type = NULL) {
   
   if (type == "prob") {
     respp <- get_prob(res_list)
+    respp[, tmpid := substr(eid,1,6)]
     
     respp <- respp[, .(
       sump = sum(prior, na.rm = TRUE),
       # Keep other columns from first row
       prior = first(prior)
-    ), by = .(ani, date)]
+    ), by = .(ani, tmpid)]
     
     if (nrow(respp[prior > sump]) > 0 ) warning("Something is wrong when type = prob (prior > sum_prior)")
     
@@ -354,19 +353,26 @@ get_matrix <- function(res_list, type = NULL) {
   }
   
   restt <- get_trusted(res_list)
+  restt[, tmpid := substr(eid,1,6)]
   
   # check dups
-  check <- respp[, .N, by = .(date, ani)][N>1]
-  if (nrow(check) > 0 ) warning("More than one egg per day for an animal is detected!")
-  c1 <- respp[, .N, by = .(date, ani)]
-  c2 <- restt[, .N, by = .(date, ani)]
-  check <- merge(c1, c2, by = c("date", "ani"))
-  if (nrow(check) > 0 ) warning("More than one egg per day for an animal is detected!")
+  check <- respp[, .N, by = .(tmpid, ani)][N>1]
+  if (nrow(check) > 0 ) warning("More than one egg per day for an animal is detected in probability dt!")
+
+  check <- restt[, .N, by = .(tmpid, ani)][N>1]
+  if (nrow(check) > 0 ) warning("More than one egg per day for an animal is detected in trusted dt!")
   
+  c1 <- respp[, .N, by = .(tmpid, ani)]
+  c2 <- restt[, .N, by = .(tmpid, ani)]
+  check <- merge(c1, c2, 
+                 by = c("tmpid", "ani"))
+  if (nrow(check) > 0 ) warning("More than one egg per day for an animal is detected between probability and trusted dt!")
+
   # matrix
-  all <- merge(respp, restt, by = c("date", "ani"), all = TRUE)
+  all <- merge(respp, restt, by = c("tmpid", "ani"), all = TRUE)
   all[is.na(prior), prior := 1]
-  resmatrix <- data.table::dcast(all, date ~ ani, 
+  setnames(all, "tmpid", "eiddate")
+  resmatrix <- data.table::dcast(all, eiddate ~ ani, 
                      value.var = "prior",
                      fill = 0,
                      fun.aggregate = sum)
