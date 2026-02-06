@@ -203,16 +203,16 @@ get_test_win <- function(start_date, end_date, min_days = 30) {
 #'   - `Nauto_filt`: filtered autonest eggs (no flag -> F_combined = FALSE)
 #' @export
 #'
-get_good_hand_eggcount <- function(meta, hand, from = NULL, to = NULL,
+get_good_hand_eggcount <- function(meta_ori, hand, from = NULL, to = NULL,
                                    hand_nest_colnames = c("Nest1", "Nest2", "Nest3", "Nest4"),
                                    Nestnumbers = 1:64, num_per_pen = 4,
                                    timezone = "Europe/Berlin",
                                    collect_min = 20,
                                    fakeegg = FALSE) {
   
-  if (!inherits(meta, "data.table")) stop("`meta` must be a data.table")
+  if (!inherits(meta_ori, "data.table")) stop("`meta_ori` must be a data.table")
   if (!inherits(hand, "data.table")) stop("`hand` must be a data.table")
-  check_required_cols(meta, c("Date", "pen", "Nestnumber", "Eggsignal", "Transponder", "End", "F_combined", "datelay"))
+  check_required_cols(meta_ori, c("Date", "pen", "Nestnumber", "Eggsignal", "Transponder", "End", "F_combined", "datelay"))
   check_required_cols(hand, c("Date", "Time_end", "Pen", "Nfloor", hand_nest_colnames))
   check_date(hand$Date)
   check_time(hand$Time_end)
@@ -230,6 +230,7 @@ get_good_hand_eggcount <- function(meta, hand, from = NULL, to = NULL,
   hand[, Date := as.Date(Date, format = "%Y-%m-%d")]
   hand[, Time_start := NULL]
   
+  meta <- data.table::copy(meta_ori)
   # Subset meta & hand#NULL Subset meta & hand
   if (!is.null(from)) {
     cat("subsetting data: Date >= ", as.character(from), "\n")
@@ -273,6 +274,7 @@ get_good_hand_eggcount <- function(meta, hand, from = NULL, to = NULL,
   if (isTRUE(fakeegg)) {
   markid <- meta[Animalmark == 0 & Eggsignal < 1, .N, by = Transponder][
     order(-N)][N > 2 & !grepl("^0[ 0]*$", Transponder), Transponder][1]
+  print(sprintf("Fakeegg marker id: ",markid))
   } else markid <- NA
   
   if (!is.na(markid)) {
