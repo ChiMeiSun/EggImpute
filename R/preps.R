@@ -285,7 +285,10 @@ get_good_hand_eggcount <- function(meta_ori, hand_ori, from = NULL, to = NULL,
     if (nrow(fakeegg[diff < 0 | diff > 10]) > 0 ) warning("Fakeegg transponder last more than 10s")
     
     if (nrow(fakeegg[Start < as_hms("06:00:00") | Start > as_hms("21:00:00")]) > 0 ) {
-      warning("Fakeegg transponder time < 6:00 or > 21:00")
+      warning("Fakeegg transponder start time < 6:00 or > 21:00")
+    }
+    if (nrow(fakeegg[End < as_hms("06:00:00") | End > as_hms("21:00:00")]) > 0 ) {
+      warning("Fakeegg transponder End time < 6:00 or > 21:00")
     }
     
     fakeegg <- fakeegg[, .SD[.N], by = .(Date, Nestnumber)]  # Avoid dups, get last record per nest/date
@@ -316,59 +319,34 @@ get_good_hand_eggcount <- function(meta_ori, hand_ori, from = NULL, to = NULL,
             c("End_sec") := .(as.numeric(tmpt$V1))]
     
     setorder(fakeegg, Date, Nestnumber)
-    global_fit <- fakeegg[, 
-                          if (sum(!is.na(End_sec)) >= 2)
-                            list(slope = coef(lm(End_sec ~ Nestnumber))[2])
-                          else
-                            list(slope = NA_real_),
-                          by = Date]
-    
-    # Global slope = median of available slopes
-    global_slope <- median(global_fit$slope, na.rm = TRUE)
+   
     
     fakeegg[, End_filled_sec := {
       non_na <- !is.na(End_sec)
-      k <- sum(non_na)
-      if (k >= 2) {
-        # Fit lm if records >= 2
-        fit <- lm(End_sec ~ Nestnumber)
-        pred <- predict(fit, newdata = .SD)
-        ifelse(is.na(End_sec), pred, End_sec)
-      } else if (k == 1) {
-        # If only one record
-        n0 <- Nestnumber[non_na]
-        e0 <- End_sec[non_na]
-        if (is.finite(global_slope)) {
-          # Try global slope
-          int <- e0 - n0 * global_slope
-          pred <- global_slope * Nestnumber + int
-          pred
-        } else {
-          # If no slope, assume time needed = collect_min
-          used <- (n0 / maxnest) * collect_min * 60
-          xs <- e0 - used
-          xe <- e0 + (collect_min * 60 - used)
-          
-          # Fill only first and last Nestnumber
-          tmp <- data.table(Nestnumber = Nestnumbers, tt = NA_real_)
-          tmp[Nestnumber == minnest, tt := xs]
-          tmp[Nestnumber == maxnest, tt := xe]
-          
-          fit2 <- lm(tmp$tt ~ tmp$Nestnumber)
-          pred2 <- predict(fit2, newdata = tmp)
-          ifelse(is.na(End_sec), pred2, End_sec)
-        }
-      } else {
-        # Other situation
-        rep(NA, .N)
-      }
+      n0 <- Nestnumber[non_na]
+      e0 <- End_sec[non_na]
+      
+      # assume time needed = collect_min
+      used <- (n0 / maxnest) * collect_min * 60
+      xs <- e0 - used
+      xe <- e0 + (collect_min * 60 - used)
+      
+      # Fill only first and last Nestnumber
+      tmp <- data.table(Nestnumber = Nestnumbers, tt = NA_real_)
+      tmp[Nestnumber == minnest, tt := xs[1]]
+      tmp[Nestnumber == maxnest, tt := xe[length(xe)]]
+      
+      fit2 <- lm(tmp$tt ~ tmp$Nestnumber)
+      pred2 <- predict(fit2, newdata = tmp)
+      ifelse(is.na(End_sec), pred2, End_sec)
+
     }, by = Date]
     
     fakeegg[, End_filled := hms::as_hms(End_filled_sec)]
     fakeegg[, dtm_a := as.POSIXct(
       sprintf("%s %s", Date, End_filled),
       format = "%Y-%m-%d %H:%M:%S", tz = timezone)]
-    fakeegg[, c("End", "End_sec", "End_filled_sec", "End_filled") := NULL]
+    fakeegg[, c("Start", "End", "diff", "End_sec", "End_filled_sec", "End_filled") := NULL]
     
     # Merge fake egg datetime
     tegg_hand <- merge(hand_long, fakeegg,
