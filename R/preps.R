@@ -203,7 +203,7 @@ get_test_win <- function(start_date, end_date, min_days = 30) {
 #'   - `Nauto_filt`: filtered autonest eggs (no flag -> F_combined = FALSE)
 #' @export
 #'
-get_good_hand_eggcount <- function(meta_ori, hand, from = NULL, to = NULL,
+get_good_hand_eggcount <- function(meta_ori, hand_ori, from = NULL, to = NULL,
                                    hand_nest_colnames = c("Nest1", "Nest2", "Nest3", "Nest4"),
                                    Nestnumbers = 1:64, num_per_pen = 4,
                                    timezone = "Europe/Berlin",
@@ -211,11 +211,11 @@ get_good_hand_eggcount <- function(meta_ori, hand, from = NULL, to = NULL,
                                    fakeegg = FALSE) {
   
   if (!inherits(meta_ori, "data.table")) stop("`meta_ori` must be a data.table")
-  if (!inherits(hand, "data.table")) stop("`hand` must be a data.table")
+  if (!inherits(hand_ori, "data.table")) stop("`hand_ori` must be a data.table")
   check_required_cols(meta_ori, c("Date", "pen", "Nestnumber", "Eggsignal", "Transponder", "End", "F_combined", "datelay"))
-  check_required_cols(hand, c("Date", "Time_end", "Pen", "Nfloor", hand_nest_colnames))
-  check_date(hand$Date)
-  check_time(hand$Time_end)
+  check_required_cols(hand_ori, c("Date", "Time_end", "Pen", "Nfloor", hand_nest_colnames))
+  check_date(hand_ori$Date)
+  check_time(hand_ori$Time_end)
   check_date(from)
   check_date(to)
   
@@ -225,6 +225,8 @@ get_good_hand_eggcount <- function(meta_ori, hand, from = NULL, to = NULL,
   collect_min <- as.numeric(collect_min)
   
   # prepare hand
+  hand <- data.table::copy(hand_ori)
+  
   time_cols <- c("Time_end")
   hand[, (time_cols) := lapply(.SD, as_hms), .SDcols = time_cols]
   hand[, Date := as.Date(Date, format = "%Y-%m-%d")]
