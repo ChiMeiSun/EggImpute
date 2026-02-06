@@ -272,9 +272,9 @@ get_good_hand_eggcount <- function(meta_ori, hand, from = NULL, to = NULL,
   
   # Prepare fake egg time 
   if (isTRUE(fakeegg)) {
-  markid <- meta[Animalmark == 0 & Eggsignal < 1, .N, by = Transponder][
+  markid <- meta[Animalmark == 0 & Eggsignal > 0, .N, by = Transponder][
     order(-N)][N > 2 & !grepl("^0[ 0]*$", Transponder), Transponder][1]
-  print(sprintf("Fakeegg marker id: ",markid))
+  print(sprintf("Fakeegg marker id: %s",markid))
   } else markid <- NA
   
   if (!is.na(markid)) {
