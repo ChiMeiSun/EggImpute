@@ -904,7 +904,7 @@ process_pen <- function(p, negg, meta, ani_info,
     eggs[, eggid := sprintf("%s%03d%02d", format(date, "%y%m%d"), Nest, nestc)]
     eggs[, nestc := NULL]
     
-    from <- min(pendate_negg$date_time_pre)
+    from <- max(pendate_negg$date_time_pre)
     to <- max(pendate_negg$date_time)
     
     # Trusted eggs from autonest

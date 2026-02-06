@@ -257,7 +257,7 @@ get_good_hand_eggcount <- function(meta, hand, from = NULL, to = NULL,
   hand_long <- merge(hand_long, hand[, .(Date, Pen, Nfloor)],
                      by = c("Date", "Pen"), all = TRUE)
 
-  # Input missing hand dates
+  # Input missing hand dates with median Time_end
   if (length(missd_hand) > 0) {
     tmp <- data.table(Date = missd_hand, 
                       Pen = max(hand_long$Pen),
@@ -276,7 +276,14 @@ get_good_hand_eggcount <- function(meta, hand, from = NULL, to = NULL,
   } else markid <- NA
   
   if (!is.na(markid)) {
-    fakeegg <- meta[Transponder == markid, .(End), by = .(Date, pen, Nestnumber)]
+    fakeegg <- meta[Transponder == markid, .(Start, End), by = .(Date, pen, Nestnumber)]
+    fakeegg[, diff := difftime(End, Start)]
+    if (nrow(fakeegg[diff < 0 | diff > 10]) > 0 ) warning("Fakeegg transponder last more than 10s")
+    
+    if (nrow(fakeegg[Start < as_hms("06:00:00") | Start > as_hms("21:00:00")]) > 0 ) {
+      warning("Fakeegg transponder time < 6:00 or > 21:00")
+    }
+    
     fakeegg <- fakeegg[, .SD[.N], by = .(Date, Nestnumber)]  # Avoid dups, get last record per nest/date
     
     fegg_dates <- sort(unique(fakeegg$Date))
