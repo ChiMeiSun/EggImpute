@@ -639,56 +639,57 @@ get_trusted_autonest <- function(eggs, pen_meta, from, to) {
   nestorder <- autofilt_ani[, .N, by = .(Nestnumber, type)][
     order(type, N, Nestnumber), unique(Nestnumber)]
   
-  ani_id <- c()
-  eid <- c()
-  date <- c()
-  laytime <- c()
-  type <- c()
+  res <- list()
   
   for (n in nestorder) {
-    neggs <- nrow(eggs[Nest == n])
-    nani <- nrow(autofilt_ani[Nestnumber == n])
+    eggs_n <- eggs[Nest == n]
+    ani_n  <- autofilt_ani[Nestnumber == n]
     
+    neggs <- nrow(eggs_n)
+    nani  <- nrow(ani_n)
+    
+    if (neggs == 0 || nani == 0) next
+    
+    # more animals than eggs
     if (neggs < nani) {
-      pri_anis <- autofilt_ani[Nestnumber == n & type == "pri", ani]
-      npri <- length(pri_anis)
-      if (neggs <= npri) {
-        pri_anis <- autofilt_ani[ani %in% pri_anis][order(laydiffh_pre_pri)][seq_len(neggs), ani]
+      pri <- ani_n[type == "pri"][order(laydiffh_pre_pri)]
+      sec <- ani_n[type == "sec"][order(-pri_count)]
+      
+      pri_keep <- pri[seq_len(min(neggs, .N))]
+      sec_quota <- neggs - nrow(pri_keep)
+      
+      sec_keep <- if (sec_quota > 0) {
+        sec[seq_len(min(sec_quota, .N))]
+      } else {
+        sec[0]
       }
-      
-      sec_quota <- max(0, neggs - npri)
-      sec_ani_keep <- autofilt_ani[Nestnumber == n & type == "sec"][order(-pri_count)][seq_len(sec_quota), ani]
-      
-      ps_anis <- c(pri_anis, sec_ani_keep)
 
-      ani_id <- c(ani_id, ps_anis)
-      eid <- c(eid, eggs[Nest == n, eggid])
+      sel <- rbind(pri_keep, sec_keep)
       
-      date <- c(date, autofilt_ani[Nestnumber == n & ani %in% ps_anis, Date][1:length(ps_anis)])
-      laytime <- c(laytime, autofilt_ani[Nestnumber == n & ani %in% ps_anis, Layingtime][1:length(ps_anis)])
-      type <- c(type, autofilt_ani[Nestnumber == n & ani %in% ps_anis, type][1:length(ps_anis)])
-
-    } else if (neggs > nani) {
-      ani_id <- c(ani_id, autofilt_ani[Nestnumber == n, ani])
-      eid <- c(eid, eggs[Nest == n, eggid][seq_len(nani)])
-      date <- c(date, autofilt_ani[Nestnumber == n, Date])
-      laytime <- c(laytime, autofilt_ani[Nestnumber == n, Layingtime])
-      type <- c(type, autofilt_ani[Nestnumber == n, type])
+    # more eggs than animals / equal  
     } else {
-      ani_id <- c(ani_id, autofilt_ani[Nestnumber == n, ani])
-      eid <- c(eid, eggs[Nest == n, eggid])
-      date <- c(date, autofilt_ani[Nestnumber == n, Date])
-      laytime <- c(laytime, autofilt_ani[Nestnumber == n, Layingtime])
-      type <- c(type, autofilt_ani[Nestnumber == n, type])
+      sel <- ani_n
     }
     
-    # Remove selected ani
-    autofilt_ani <- autofilt_ani[!ani %in% ani_id]
+    k <- min(nrow(sel), nrow(eggs_n))
+    
+    out <- data.table(
+      eid       = eggs_n$eggid[seq_len(k)],
+      ani       = sel$ani[seq_len(k)],
+      date      = sel$Date[seq_len(k)],
+      laytime   = sel$Layingtime[seq_len(k)],
+      type      = sel$type[seq_len(k)]
+    )
+    
+    res[[length(res) + 1]] <- out
+    
+    # Remove selected animals
+    autofilt_ani <- autofilt_ani[!(Nestnumber == n & ani %in% sel$ani)]
   }
   
-  trusted <- data.table(eid = eid, ani = ani_id, date = as.Date(date), layingtime = hms::as_hms(laytime), type = type)
+  trusted <- rbindlist(res)
   
-  if (nrow(trusted[, .N, by = eid][N>1]) > 0) {
+  if (nrow(trusted) > 0 && nrow(trusted[, .N, by = eid][N>1]) > 0) {
     warning("Trusted dt has assigned duplicated eggs! Check code")
   }
   
