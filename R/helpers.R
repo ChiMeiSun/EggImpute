@@ -244,50 +244,6 @@ load_results <- function(types = c("prob", "assign"),
 }
 
 
-#' Get CV results from function "CV_pen"
-#'
-#' @param res_list A list contains both or either "prob" and "assign" output
-#'
-#' @return A data.table of results, `pen`, `TF`(True/False), `prop`(proportion), `type`(prob/assign)
-#' @export
-#'
-get_CV <- function(res_list) {
-  data.table::rbindlist(lapply(names(res_list), function(type_name) {
-  CV_res <- res_list[[type_name]]$CV_res
-  
-  tmp <- data.table::rbindlist(lapply(seq_along(CV_res), function(i) {
-    dat <- CV_res[[i]]
-    tab <- table(factor(dat$topx, levels = c(TRUE, FALSE))) / nrow(dat)
-    data.table(pen = i, TF = names(tab), prop = as.numeric(tab))
-  }))
-  
-  tmp[, type := type_name]
-  tmp
-}))
-}
-
-#' Get summed prob & assign results over a period from function "process_pen"
-#'
-#' @param res_list A list contains both or either "prob" and "assign" output
-#'
-#' @return A data.table of results, `ani`, `sum_prior`(sum of prob), `type`(prob/assign)
-#' @export
-#'
-get_sumprob <- function(res_list) {
-  data.table::rbindlist(lapply(names(res_list), function(type_name) {
-    pen_res <- res_list[[type_name]]$pen_res
-    
-    tmp <- data.table::rbindlist(lapply(pen_res, function(pen) {
-      pen$pen_priors
-    }))
-    
-    tmpp <- tmp[, .(sum_prior = sum(prior)), by = ani]
-    
-    tmpp[, type := type_name]
-    tmpp
-  }))
-}
-
 #' Get posterior probabilities per egg from function "process_pen"
 #'
 #' @param res_list A list contains "pen_priors" and "pen_trusted" output by pen
@@ -318,14 +274,16 @@ get_trusted <- function(res_list) {
 
 
 
-#' Get prob/assign results as a `[date x ani]` matrix
+#' Get prob/assign results as a data table
 #'
 #' @param res_list A list contains "pen_priors" and "pen_trusted" output by pen
 #'
-#' @return A matrix of results `[date x ani]`
+#' @return A data table of results,`eiddate`(date of egg collection), `ani`, 
+#' `prior`(for trusted & results type = "assign", prior = 1; results type = "prob", prior is the posterior probability),
+#'  `layingtime`(fro
 #' @export
 #'
-get_matrix <- function(res_list) {
+get_ENdt <- function(res_list) {
 
   respp <- get_prob(res_list)
   respp[, tmpid := substr(eid,1,6)]
@@ -337,7 +295,7 @@ get_matrix <- function(res_list) {
   ), by = .(ani, tmpid)]
   
   respp[, prior := round(sump, 2)]
-    
+  respp[, sump := NULL]
 
   restt <- get_trusted(res_list)
   restt[, tmpid := substr(eid,1,6)]
@@ -359,10 +317,57 @@ get_matrix <- function(res_list) {
   all <- merge(respp, restt, by = c("tmpid", "ani"), all = TRUE)
   all[is.na(prior), prior := 1]
   setnames(all, "tmpid", "eiddate")
+  
+  all
+}
+
+
+#' Get prob/assign results as a `[date x ani]` matrix
+#'
+#' @param res_list A list contains "pen_priors" and "pen_trusted" output by pen
+#'
+#' @return A matrix of results `[date x ani]`
+#' @export
+#'
+get_ENmatrix <- function(res_list) {
+  
+  respp <- get_prob(res_list)
+  respp[, tmpid := substr(eid,1,6)]
+  
+  respp <- respp[, .(
+    sump = sum(prior, na.rm = TRUE),
+    # Keep other columns from first row
+    prior = first(prior)
+  ), by = .(ani, tmpid)]
+  
+  respp[, prior := round(sump, 2)]
+  respp[, sump := NULL]
+  
+  
+  restt <- get_trusted(res_list)
+  restt[, tmpid := substr(eid,1,6)]
+  
+  # check dups
+  check <- respp[, .N, by = .(tmpid, ani)][N>1]
+  if (nrow(check) > 0 ) warning("More than one egg per day for an animal is detected in probability dt!")
+  
+  check <- restt[, .N, by = .(eid, ani)][N>1]
+  if (nrow(check) > 0 ) warning("More than one egg per day for an animal is detected in trusted dt!")
+  
+  c1 <- respp[, .N, by = .(tmpid, ani)]
+  c2 <- restt[, .N, by = .(tmpid, ani)]
+  check <- merge(c1, c2, 
+                 by = c("tmpid", "ani"))
+  if (nrow(check) > 0 ) warning("More than one egg per day for an animal is detected between probability and trusted dt!")
+  
+  # matrix
+  all <- merge(respp, restt, by = c("tmpid", "ani"), all = TRUE)
+  all[is.na(prior), prior := 1]
+  setnames(all, "tmpid", "eiddate")
   resmatrix <- data.table::dcast(all, eiddate ~ ani, 
-                     value.var = "prior",
-                     fill = 0,
-                     fun.aggregate = sum)
+                                 value.var = "prior",
+                                 fill = 0,
+                                 fun.aggregate = sum)
   
   if (any(resmatrix[, -1] > 1)) {
     warning("Found duplicate date/ani combinations with prior > 1")
@@ -370,5 +375,3 @@ get_matrix <- function(res_list) {
   
   resmatrix
 }
-
-
