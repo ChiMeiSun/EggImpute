@@ -5,8 +5,8 @@
 \title{Combine hand-counted and automated egg data for validation}
 \usage{
 get_good_hand_eggcount(
-  meta,
-  hand,
+  meta_ori,
+  hand_ori,
   from = NULL,
   to = NULL,
   hand_nest_colnames = c("Nest1", "Nest2", "Nest3", "Nest4"),
@@ -18,11 +18,6 @@ get_good_hand_eggcount(
 )
 }
 \arguments{
-\item{meta}{A \code{data.table} containing autonest data after prep_data.}
-
-\item{hand}{\code{data.table} containing hand-count egg data, required columns: \code{Date}(format yyyy-mm-dd),
-\code{Time_end}(format hh:mm:ss), \code{pen}, \code{Nfloor}, and columns included in param \code{hand_nest_colnames}}
-
 \item{from, to}{\code{Date} or \code{character(1)}, optional date range (format yyyy-mm-dd.}
 
 \item{hand_nest_colnames}{Column names for nests per pen (default: \verb{Nest1, Nest2, Nest3, Nest4}).}
@@ -36,6 +31,11 @@ get_good_hand_eggcount(
 \item{collect_min}{Total time needed in minutes for egg collection (default: 20).}
 
 \item{fakeegg}{TRUE/FALSE, if manual transponder for precise time record is available.}
+
+\item{meta}{A \code{data.table} containing autonest data after prep_data.}
+
+\item{hand}{\code{data.table} containing hand-count egg data, required columns: \code{Date}(format yyyy-mm-dd),
+\code{Time_end}(format hh:mm:ss), \code{pen}, \code{Nfloor}, and columns included in param \code{hand_nest_colnames}}
 }
 \value{
 A \code{data.table} containing hand and automatic egg counts per nest and time interval.
