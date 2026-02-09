@@ -25,7 +25,8 @@ CV_pen(
   factor_nl = 1,
   weight_np = 0.2,
   factor_np = 1,
-  norm_result = "prob"
+  norm_result = "prob",
+  flat = FALSE
 )
 }
 \arguments{
@@ -68,6 +69,8 @@ CV_pen(
 \item{factor_np}{For nest preference update: Factor (default: 1).}
 
 \item{norm_result}{Character, either \code{"prob"} to normalize probabilities (default) or \code{"assign"}.}
+
+\item{flat}{TRUE: to get only flat priors; FALSE: to get Bayesian updated probabilities (default: FALSE).}
 }
 \value{
 Data table of masked trusted egg-animal pairs with evaluation results.

@@ -842,7 +842,10 @@ process_pen <- function(p, negg, meta, ani_info,
   if (!norm_result %in% c("prob", "assign")) {
     stop("Argument 'result' must be either 'prob' or 'assign'")
   }
+  
+  if (flat == TRUE) {
   message("flat = TRUE, ignore norm_result, computing flat (equal) priors")
+  }
   
   check_required_cols(negg, c("Date", "Pen", "Nest", "Nhand", "Nfloor", "date_time_pre", "date_time"))
   check_required_cols(meta, c("ani", "pen", "datelay", "Eggsignal", "F_combined", "type", "pri_count", "laydiffh_pre_pri", "Nestnumber"))
@@ -1024,6 +1027,7 @@ Add_cv_folds <- function(dt, k = 5, seed = 123) {
 #' @param weight_np For nest preference update: Weight (default: 0.2).
 #' @param factor_np For nest preference update: Factor (default: 1).
 #' @param norm_result Character, either `"prob"` to normalize probabilities (default) or `"assign"`.
+#' @param flat TRUE: to get only flat priors; FALSE: to get Bayesian updated probabilities (default: FALSE).
 #'
 #' @return Data table of masked trusted egg-animal pairs with evaluation results.
 #' @export
@@ -1067,6 +1071,10 @@ CV_pen <- function(pen_trusted_dat, reps = 2, k = 5, seed = 123,
   
   if (!norm_result %in% c("prob", "assign")) {
     stop("Argument 'result' must be either 'prob' or 'assign'")
+  }
+  
+  if (flat == TRUE) {
+    message("flat = TRUE, ignore norm_result, computing flat (equal) priors")
   }
   
   if (!is.numeric(reps) || reps < 1) stop("'reps' must be a positive integer")
