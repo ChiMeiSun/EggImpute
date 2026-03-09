@@ -262,6 +262,7 @@ get_prob <- function(res_list) {
 #'
 #' @param dat A data.table contains `eid`(egg id), `pen`
 #' @export
+#' 
 modify_eid <- function(respp) {
   dat <- copy(respp)
   dat[, date := substr(eid,1,6)]
