@@ -257,6 +257,19 @@ get_prob <- function(res_list) {
   }))
 }
 
+#' modify eid for floor eggs to get get unique eid even across pens
+#'
+#' @param dat A data.table contains `eid`(egg id), `pen`
+
+modify_eid <- function(respp) {
+  dat <- copy(respp)
+  dat[, date := substr(eid,1,6)]
+  dat[, nest := substr(eid,7,9)]
+  dat[, ord := substr(eid,10,11)]
+  dat[nest == "099", eid := sprintf("%s%s%s",date,substr(paste0(pen,"99"),1,3),ord)]
+  
+  dat
+}
 
 #' Get trusted set from function "process_pen"
 #'
@@ -283,16 +296,22 @@ get_trusted <- function(res_list) {
 #'  `layingtime`(fro
 #' @export
 #'
-get_ENdt <- function(res_list) {
+get_ENdt <- function(res_list, type = "prob") {
 
   respp <- get_prob(res_list)
   respp[, tmpid := substr(eid,1,6)]
+  
+  if (type == "assign") {
+    cols <- c("ani", "eid", "tmpid", "pen")
+  } else if (type == "prob" | type == "flat") {
+    cols <- c("ani", "tmpid", "pen")
+  } else stop("type must be assign/flat/prob(default)")
   
   respp <- respp[, .(
     sump = sum(prior, na.rm = TRUE),
     # Keep other columns from first row
     prior = first(prior)
-  ), by = .(ani, tmpid)]
+  ), by = cols]
   
   respp[, prior := round(sump, 2)]
   respp[, sump := NULL]
@@ -314,7 +333,7 @@ get_ENdt <- function(res_list) {
   if (nrow(check) > 0 ) warning("More than one egg per day for an animal is detected between probability and trusted dt!")
 
   # matrix
-  all <- merge(respp, restt, by = c("tmpid", "ani"), all = TRUE)
+  all <- merge(respp, restt, by = cols, all = TRUE)
   all[is.na(prior), prior := 1]
   setnames(all, "tmpid", "eiddate")
   
