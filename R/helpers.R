@@ -257,17 +257,16 @@ get_prob <- function(res_list) {
   }))
 }
 
+
 #' modify eid for floor eggs to get get unique eid even across pens
 #'
 #' @param dat A data.table contains `eid`(egg id), `pen`
-
 modify_eid <- function(respp) {
   dat <- copy(respp)
   dat[, date := substr(eid,1,6)]
   dat[, nest := substr(eid,7,9)]
   dat[, ord := substr(eid,10,11)]
   dat[nest == "099", eid := sprintf("%s%s%s",date,substr(paste0(pen,"99"),1,3),ord)]
-  
   dat
 }
 
