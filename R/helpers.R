@@ -253,7 +253,8 @@ load_results <- function(types = c("prob", "assign"),
 #'
 get_prob <- function(res_list) {
   data.table::rbindlist(lapply(res_list, function(pen) {
-    pen$pen_priors
+    x <- pen$pen_priors
+    x[, imptype := "imp"]
   }))
 }
 
@@ -282,7 +283,8 @@ modify_eid <- function(respp) {
 #'
 get_trusted <- function(res_list) {
   data.table::rbindlist(lapply(res_list, function(pen) {
-    pen$pen_trusted
+    x <- pen$pen_trusted
+    x[, imptype := "trust"]
   }))
 }
 
