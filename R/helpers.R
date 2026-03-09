@@ -266,10 +266,13 @@ get_prob <- function(res_list) {
 #' 
 modify_eid <- function(respp) {
   dat <- copy(respp)
-  dat[, date := substr(eid,1,6)]
-  dat[, nest := substr(eid,7,9)]
-  dat[, ord := substr(eid,10,11)]
-  dat[nest == "099", eid := sprintf("%s%s%s",date,substr(paste0(pen,"99"),1,3),ord)]
+  dat[, dddate := substr(eid,1,6)]
+  dat[, nnnest := substr(eid,7,9)]
+  dat[, ooord := substr(eid,10,11)]
+  dat[nnnest == "099", eid_modify := sprintf("%s%s%s",dddate,substr(paste0(pen,"99"),1,3),ooord)]
+  dat[, dddate := NULL]
+  dat[, nnnest := NULL]
+  dat[, ooord := NULL]
   dat
 }
 
