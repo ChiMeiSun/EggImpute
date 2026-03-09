@@ -305,9 +305,9 @@ get_ENdt <- function(res_list, type = "prob") {
   respp[, tmpid := substr(eid,1,6)]
   
   if (type == "assign") {
-    cols <- c("ani", "eid", "tmpid", "pen")
+    cols <- c("ani", "eid", "tmpid", "pen", "imptype")
   } else if (type == "prob" | type == "flat") {
-    cols <- c("ani", "tmpid", "pen")
+    cols <- c("ani", "tmpid", "pen", "imptype")
   } else stop("type must be assign/flat/prob(default)")
   
   respp <- respp[, .(
