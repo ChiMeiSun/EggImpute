@@ -4,7 +4,7 @@
 \alias{get_ENdt}
 \title{Get prob/assign results as a data table}
 \usage{
-get_ENdt(res_list)
+get_ENdt(res_list, type = "prob")
 }
 \arguments{
 \item{res_list}{A list contains "pen_priors" and "pen_trusted" output by pen}
