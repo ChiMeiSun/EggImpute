@@ -261,6 +261,7 @@ get_prob <- function(res_list) {
 #' modify eid for floor eggs to get get unique eid even across pens
 #'
 #' @param dat A data.table contains `eid`(egg id), `pen`
+#' @export
 modify_eid <- function(respp) {
   dat <- copy(respp)
   dat[, date := substr(eid,1,6)]
