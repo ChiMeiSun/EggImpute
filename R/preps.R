@@ -252,7 +252,7 @@ get_good_hand_eggcount <- function(meta_ori, hand_ori, from = NULL, to = NULL,
   missd_hand <- c(missd)
   
   notimed <- hand[is.na(Time_end) & is.na(Time_end), .N, by = .(Date)][N >= npen, Date]
-  if (length(notimed) > 0 ) message("Dates wihtout any time records in hand: ", paste0(nad, ",") )
+  if (length(notimed) > 0 ) message("Dates wihtout any time records in hand: ", paste0(notimed, ",") )
   
   # Hand counting reshaped 
   hand_long <- melt(hand[, c("Date", "Time_end", "Pen", hand_nest_colnames), with = FALSE],
