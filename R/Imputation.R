@@ -782,7 +782,9 @@ Norm_prior <- function(prior, result = "prob", index_floornest, pen_meta) {
 #' @param negg data.table of egg counts per nest/floor per date.
 #' @param meta data.table of autonest metadata.
 #' @param ani_info data.table with animal presence/absence info.
+#' @param ignore_anis Animal marks in the autonest data to be ignored when imputing (default: c()).
 #' @param index_floornest Integer ID used for floor eggs (default: 99).
+#' @param max_ani_pen Maximum allowed number of candidates per pen. A control to check `ani_info` (default: 21).
 #' @param ani_impeggs data.table of imputed laying dates.
 #' @param weight_imd For prior update using imputed laying dates: Weight (default: 1).
 #' @param factor_imd For prior update using imputed laying dates: factor (default: 1).
@@ -805,7 +807,9 @@ Norm_prior <- function(prior, result = "prob", index_floornest, pen_meta) {
 #' @export
 #'
 process_pen <- function(p, negg, meta, ani_info,
+                        ignore_anis = c(),
                         index_floornest = 99,
+                        max_ani_pen = 21,
                         ani_impeggs, weight_imd = 1, factor_imd = 1, p_perc_dups = 50,
                         nearby_days = 2, penalty_weight = 0.3, max_penalty = 0.6, 
                         weight_nl = 0.8, factor_nl = 1,
@@ -829,6 +833,7 @@ process_pen <- function(p, negg, meta, ani_info,
     stop("'nearby_days' must be a positive integer.")
   }
   nearby_days <- as.integer(nearby_days)
+  max_ani_pen <- as.integer(max_ani_pen)
   
   for (arg_name in c("weight_imd", "factor_imd", "p_perc_dups",
                      "penalty_weight", "max_penalty", "weight_nl", "factor_nl",
@@ -886,13 +891,13 @@ process_pen <- function(p, negg, meta, ani_info,
     cand_ani <- ani_info[Pen == p & Leave >= date, ani]
     
     # Sanity check: too many animals
-    if (length(cand_ani) > 21) {
-      warning("Pen ", p, " has more than 21 animals?")
+    if (length(cand_ani) > max_ani_pen) {
+      warning("Pen ", p, " has more than ",max_ani_pen," animals?")
     }
     
     # Check if all auto_ani in cand_ani
     auto_ani <- unique(pen_meta$ani)
-    auto_ani <- auto_ani[auto_ani != 0]
+    auto_ani <- auto_ani[!auto_ani %in% ignore_anis]
     x <- auto_ani[!auto_ani %in% cand_ani]
     if (length(x) != 0) {
       if (nrow(pen_meta[ani %in% x & Date >= date]) > 0) {
@@ -1014,7 +1019,9 @@ Add_cv_folds <- function(dt, k = 5, seed = 123) {
 #' @param negg data.table of egg counts per nest/floor per date.
 #' @param meta data.table of autonest metadata.
 #' @param ani_info data.table with animal presence/absence info.
+#' @param ignore_anis Animal marks in the autonest data to be ignored when imputing (default: c()).
 #' @param index_floornest Integer ID used for floor eggs (default: 99).
+#' @param max_ani_pen Maximum allowed number of candidates per pen. A control to check `ani_info` (default: 21).
 #' @param ani_impeggs data.table of imputed laying dates.
 #' @param weight_imd For prior update using imputed laying dates: Weight (default: 1).
 #' @param factor_imd For prior update using imputed laying dates: factor (default: 1).
@@ -1034,7 +1041,9 @@ Add_cv_folds <- function(dt, k = 5, seed = 123) {
 #'
 CV_pen <- function(pen_trusted_dat, reps = 2, k = 5, seed = 123,
                    p, negg, meta, ani_info,
+                   ignore_anis = c(),
                    index_floornest = 99,
+                   max_ani_pen = 21,
                    ani_impeggs, weight_imd = 1, factor_imd = 1, p_perc_dups = 50,
                    nearby_days = 2, penalty_weight = 0.3, max_penalty = 0.6, 
                    weight_nl = 0.8, factor_nl = 1,
@@ -1059,6 +1068,7 @@ CV_pen <- function(pen_trusted_dat, reps = 2, k = 5, seed = 123,
   }
   
   nearby_days <- as.integer(nearby_days)
+  max_ani_pen <- as.integer(max_ani_pen)
   
   for (arg_name in c("weight_imd", "factor_imd", "p_perc_dups",
                      "penalty_weight", "max_penalty", "weight_nl", "factor_nl",
@@ -1126,13 +1136,13 @@ CV_pen <- function(pen_trusted_dat, reps = 2, k = 5, seed = 123,
         cand_ani <- ani_info[Pen == p & Leave >= date, ani]
         
         # Sanity check: too many animals
-        if (length(cand_ani) > 25) {
-          warning("Pen ", p, " has more than 25 animals?")
+        if (length(cand_ani) > max_ani_pen) {
+          warning("Pen ", p, " has more than ",max_ani_pen," animals?")
         }
         
         # Check if all auto_ani in cand_ani
         auto_ani <- unique(pen_meta$ani)
-        auto_ani <- auto_ani[auto_ani != 0]
+        auto_ani <- auto_ani[!auto_ani %in% ignore_anis]
         x <- auto_ani[!auto_ani %in% cand_ani]
         if (length(x) != 0) {
           if (nrow(pen_meta[ani %in% x & Date >= date]) > 0) {

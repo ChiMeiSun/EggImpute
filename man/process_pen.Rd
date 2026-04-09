@@ -9,7 +9,9 @@ process_pen(
   negg,
   meta,
   ani_info,
+  ignore_anis = c(),
   index_floornest = 99,
+  max_ani_pen = 21,
   ani_impeggs,
   weight_imd = 1,
   factor_imd = 1,
@@ -34,7 +36,11 @@ process_pen(
 
 \item{ani_info}{data.table with animal presence/absence info.}
 
+\item{ignore_anis}{Animal marks in the autonest data to be ignored when imputing (default: c()).}
+
 \item{index_floornest}{Integer ID used for floor eggs (default: 99).}
+
+\item{max_ani_pen}{Maximum allowed number of candidates per pen. A control to check \code{ani_info} (default: 21).}
 
 \item{ani_impeggs}{data.table of imputed laying dates.}
 
