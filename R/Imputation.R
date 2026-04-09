@@ -948,7 +948,7 @@ process_pen <- function(p, negg, meta, ani_info,
       prior <- Norm_prior(prior, result = norm_result, index_floornest, pen_meta)
     }
     # Check prob sums
-    bad <- which(rowSums(prior) > 1 + 1e-6)
+    bad <- which(rowSums(prior) > (1 + 1e-6))
     if (length(bad) > 0) {
       warning("Date ", date, ": prob per egg (rowSums) > 1")
     }
