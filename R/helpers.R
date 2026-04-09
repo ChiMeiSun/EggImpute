@@ -338,7 +338,7 @@ get_ENdt <- function(res_list, type = "prob") {
                  by = c("tmpid", "ani"))
   if (nrow(check) > 0 ) warning("More than one egg per day for an animal is detected between probability and trusted dt!")
 
-  # matrix
+  # merge
   all <- merge(respp, restt, by = cols, all = TRUE)
   all[is.na(prior), prior := 1]
   setnames(all, "tmpid", "eiddate")

@@ -223,6 +223,7 @@ get_good_hand_eggcount <- function(meta_ori, hand_ori, from = NULL, to = NULL,
   minnest <- min(Nestnumbers)
   maxnest <- max(Nestnumbers)
   collect_min <- as.numeric(collect_min)
+  npen <- maxnest %/% num_per_pen
   
   # prepare hand
   hand <- data.table::copy(hand_ori)
@@ -230,8 +231,7 @@ get_good_hand_eggcount <- function(meta_ori, hand_ori, from = NULL, to = NULL,
   time_cols <- c("Time_end")
   hand[, (time_cols) := lapply(.SD, as_hms), .SDcols = time_cols]
   hand[, Date := as.Date(Date, format = "%Y-%m-%d")]
-  hand[, Time_start := NULL]
-  
+
   meta <- data.table::copy(meta_ori)
   # Subset meta & hand#NULL Subset meta & hand
   if (!is.null(from)) {
@@ -249,7 +249,10 @@ get_good_hand_eggcount <- function(meta_ori, hand_ori, from = NULL, to = NULL,
   all_dates <- seq(min(hand$Date), max(hand$Date), by = "days")
   missd <- all_dates[!all_dates %in% hand$Date]
   if (length(missd) > 0) warning("Missing dates in hand: ", paste0(missd, ","))
-  missd_hand <- missd
+  missd_hand <- c(missd)
+  
+  notimed <- hand[is.na(Time_end) & is.na(Time_end), .N, by = .(Date)][N >= npen, Date]
+  if (length(notimed) > 0 ) message("Dates wihtout any time records in hand: ", paste0(nad, ",") )
   
   # Hand counting reshaped 
   hand_long <- melt(hand[, c("Date", "Time_end", "Pen", hand_nest_colnames), with = FALSE],
@@ -270,7 +273,12 @@ get_good_hand_eggcount <- function(meta_ori, hand_ori, from = NULL, to = NULL,
     hand_long <- rbind(hand_long, tmp, fill = TRUE)
     setorder(hand_long, Date)
   }
-  
+  # Input no time record hand dates with median Time_end
+  if (length(notimed) > 0) {
+    hand_long[Date %in% notimed & Nest == max(hand_long$Nest), 
+              Time_end := hms::as_hms(median(as.numeric(hand_long$Time_end), na.rm = TRUE))
+    ]
+  }
   
   # Prepare fake egg time 
   if (isTRUE(fakeegg)) {
@@ -293,6 +301,7 @@ get_good_hand_eggcount <- function(meta_ori, hand_ori, from = NULL, to = NULL,
     
     fakeegg <- fakeegg[, .SD[.N], by = .(Date, Nestnumber)]  # Avoid dups, get last record per nest/date
     
+    # Check fakeegg data
     fegg_dates <- sort(unique(fakeegg$Date))
     all_dates <- seq(min(hand$Date), max(hand$Date), by = "days")
     missd <- all_dates[!all_dates %in% fegg_dates]
@@ -314,7 +323,7 @@ get_good_hand_eggcount <- function(meta_ori, hand_ori, from = NULL, to = NULL,
     ]
     
     # Fill in missing dates, using hand_time as the "end" time
-    tmpt <- hand_long[Date %in% missd_fe, max(Time_end), by = Date]
+    tmpt <- hand_long[Date %in% missd_fe, max(Time_end, na.rm = TRUE), by = Date]
     fakeegg[Date %in% missd & Nestnumber == max(Nestnumbers), 
             c("End_sec") := .(as.numeric(tmpt$V1))]
     
