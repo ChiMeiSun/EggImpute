@@ -266,16 +266,16 @@ get_good_hand_eggcount <- function(meta_ori, hand_ori, from = NULL, to = NULL,
   # Input missing hand dates with median Time_end
   if (length(missd_hand) > 0) {
     tmp <- data.table(Date = missd_hand, 
-                      Pen = max(hand_long$Pen),
+                      Pen = unique(hand_long$Pen),
                       Time_end = hms::as_hms(median(as.numeric(hand_long$Time_end), na.rm = TRUE)),
-                      Nest = max(hand_long$Nest),
+                      Nest = unique(hand_long$Nest),
                       Nhand = 0, Nfloor = 0)
     hand_long <- rbind(hand_long, tmp, fill = TRUE)
     setorder(hand_long, Date)
   }
   # Input no time record hand dates with median Time_end
   if (length(notimed) > 0) {
-    hand_long[Date %in% notimed & Nest == max(hand_long$Nest), 
+    hand_long[Date %in% notimed, 
               Time_end := hms::as_hms(median(as.numeric(hand_long$Time_end), na.rm = TRUE))
     ]
   }
@@ -369,9 +369,12 @@ get_good_hand_eggcount <- function(meta_ori, hand_ori, from = NULL, to = NULL,
     tegg_hand[!is.na(dtm_a), dtm_h := dtm_a]
   } else {
     tegg_hand <- hand_long
-    tegg_hand[, dtm_h := as.POSIXct(
+    tegg_hand[, `:=` (
+      dtm_a = NA,
+      dtm_h = as.POSIXct(
       sprintf("%s %s", Date, Time_end), 
-      format = "%Y-%m-%d %H:%M:%S", tz = timezone)]
+      format = "%Y-%m-%d %H:%M:%S", tz = timezone)
+    )]
   }
   
   setorder(tegg_hand, Pen, Nest, dtm_h)
