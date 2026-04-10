@@ -746,25 +746,26 @@ Norm_prior <- function(prior, result = "prob", index_floornest, pen_meta) {
   if (result == "assign") {
     # Flatten the matrix, sort globally, and pick the highest prior
     dt <- as.data.table(as.table(prior))
-    setnames(dt, c("eid", "ani", "p"))
-    dt[, nest := as.integer(substr(eid, 7, 9))]
-    
-    dt_nest <- dt[nest != index_floornest]
-    dt_floor <- dt[nest == index_floornest]
-    
-    # First assign nest egg, then floor egg
-    sele <- assign_greedy(dt_nest, nestleftover = NULL, pen_meta)
-    sele <- rbind(sele,
-                  assign_greedy(
-                    dt = dt_floor[!(ani %in% sele$ani)], 
-                    nestleftover = dt_nest[!(ani %in% sele$ani)],
-                    pen_meta)
-    )
-    
-    for (i in seq_len(nrow(sele))) {
-      prior[sele$eid[i], sele$ani[i]] <- 1
+    if (nrow(dt) > 0) {
+      setnames(dt, c("eid", "ani", "p"))
+      dt[, nest := as.integer(substr(eid, 7, 9))]
+      
+      dt_nest <- dt[nest != index_floornest]
+      dt_floor <- dt[nest == index_floornest]
+      
+      # First assign nest egg, then floor egg
+      sele <- assign_greedy(dt_nest, nestleftover = NULL, pen_meta)
+      sele <- rbind(sele,
+                    assign_greedy(
+                      dt = dt_floor[!(ani %in% sele$ani)], 
+                      nestleftover = dt_nest[!(ani %in% sele$ani)],
+                      pen_meta)
+      )
+      for (i in seq_len(nrow(sele))) {
+        prior[sele$eid[i], sele$ani[i]] <- 1
+      }
+      prior[prior != 1] <- 0
     }
-    prior[prior != 1] <- 0
   }
   
   return(prior)
