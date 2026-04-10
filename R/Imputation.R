@@ -929,7 +929,7 @@ process_pen <- function(p, negg, meta, ani_info,
       prior <- matrix(1, 
                       nrow = nrow(eggs), 
                       ncol = 1, 
-                      dimnames = list(eggs$eggid, NA))
+                      dimnames = list(eggs$eggid, "nocand"))
       
     } else {
       # Naive prior
