@@ -923,30 +923,40 @@ process_pen <- function(p, negg, meta, ani_info,
     cand_ani <- cand_ani[!cand_ani %in% dt_trust$ani]
     eggs <- eggs[!eggid %in% dt_trust$eid]
     
-    # Naive prior
-    prior <- make_naive_prior(eggs$eggid, cand_ani)
-    
-    if (flat == TRUE) {
-      prior <- prior
+    # if more eggs than candidates, warning & make prior
+    if (nrow(eggs) > length(cand_ani)) {
+      warning("Num.egg > Num.candidates! for pen ",p," on ",date)
+      prior <- matrix(1, 
+                      nrow = nrow(eggs), 
+                      ncol = 1, 
+                      dimnames = list(eggs$eggid, NA))
       
     } else {
-      # Update by laydates (+imputed) based on laying pattern throughout the period
-      prior <- update_prior_laydates(prior, ani_impeggs, from, to, date, pen_meta,
-                                     weight = weight_imd, factor = factor_imd, p_perc_dups = p_perc_dups)
+      # Naive prior
+      prior <- make_naive_prior(eggs$eggid, cand_ani)
       
-      # Update by nearby days' laying pattern
-      prior <- update_prior_nestlay(prior, eggs, cand_ani, pen_meta, from, to, 
-                                    index_floornest,
-                                    nearby_days = nearby_days, 
-                                    penalty_weight = penalty_weight, max_penalty = max_penalty, 
-                                    weight = weight_nl, factor = factor_nl)
-      
-      # Update by nest preference
-      prior <- update_prior_nestpref(prior, eggs, ani_prefer_nest, 
-                                     index_floornest, weight = weight_np, factor = factor_np)
-      
-      # Normalise prior
-      prior <- Norm_prior(prior, result = norm_result, index_floornest, pen_meta)
+      if (flat == TRUE) {
+        prior <- prior
+        
+      } else {
+        # Update by laydates (+imputed) based on laying pattern throughout the period
+        prior <- update_prior_laydates(prior, ani_impeggs, from, to, date, pen_meta,
+                                       weight = weight_imd, factor = factor_imd, p_perc_dups = p_perc_dups)
+        
+        # Update by nearby days' laying pattern
+        prior <- update_prior_nestlay(prior, eggs, cand_ani, pen_meta, from, to, 
+                                      index_floornest,
+                                      nearby_days = nearby_days, 
+                                      penalty_weight = penalty_weight, max_penalty = max_penalty, 
+                                      weight = weight_nl, factor = factor_nl)
+        
+        # Update by nest preference
+        prior <- update_prior_nestpref(prior, eggs, ani_prefer_nest, 
+                                       index_floornest, weight = weight_np, factor = factor_np)
+        
+        # Normalise prior
+        prior <- Norm_prior(prior, result = norm_result, index_floornest, pen_meta)
+      }
     }
     # Check prob sums
     bad <- which(rowSums(prior) > (1 + 1e-6))
