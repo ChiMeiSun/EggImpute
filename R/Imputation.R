@@ -764,6 +764,7 @@ Norm_prior <- function(prior, result = "prob", index_floornest, pen_meta) {
       )
       
       for (i in seq_len(nrow(sele))) {
+        prior[sele$eid[i], ] <- 0
         prior[, sele$ani[i]] <- 0
         prior[sele$eid[i], sele$ani[i]] <- 1
       }
