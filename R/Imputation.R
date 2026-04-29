@@ -923,14 +923,12 @@ process_pen <- function(p, negg, meta, ani_info,
     cand_ani <- cand_ani[!cand_ani %in% dt_trust$ani]
     eggs <- eggs[!eggid %in% dt_trust$eid]
     
+    ndiff_eggcand <- nrow(eggs) - length(cand_ani)
     # if more eggs than candidates, warning & make prior
-    if (nrow(eggs) > length(cand_ani)) {
-      warning("Num.egg > Num.candidates! for pen ",p," on ",date)
-      prior <- matrix(1, 
-                      nrow = nrow(eggs), 
-                      ncol = 1, 
-                      dimnames = list(eggs$eggid, "nocand"))
-      
+    if (ndiff_eggcand > 0) {
+      warning("Num.egg > Num.candidates! ",ndiff_eggcand," extra egg(s) for pen ",p," on ",date)
+      eggs <- eggs[1:length(cand_ani)]
+
     } else {
       # Naive prior
       prior <- make_naive_prior(eggs$eggid, cand_ani)
