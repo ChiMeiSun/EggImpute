@@ -746,6 +746,7 @@ Norm_prior <- function(prior, result = "prob", index_floornest, pen_meta) {
   if (result == "assign") {
     # Flatten the matrix, sort globally, and pick the highest prior
     dt <- as.data.table(as.table(prior))
+    
     if (nrow(dt) > 0) {
       setnames(dt, c("eid", "ani", "p"))
       dt[, nest := as.integer(substr(eid, 7, 9))]
@@ -761,10 +762,11 @@ Norm_prior <- function(prior, result = "prob", index_floornest, pen_meta) {
                       nestleftover = dt_nest[!(ani %in% sele$ani)],
                       pen_meta)
       )
+      
       for (i in seq_len(nrow(sele))) {
+        prior[, sele$ani[i]] <- 0
         prior[sele$eid[i], sele$ani[i]] <- 1
       }
-      prior[prior != 1] <- 0
     }
   }
   
