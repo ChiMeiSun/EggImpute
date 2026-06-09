@@ -931,8 +931,9 @@ process_pen <- function(p, negg, meta, ani_info,
     if (ndiff_eggcand > 0) {
       warning("Num.egg > Num.candidates! ",ndiff_eggcand," extra egg(s) for pen ",p," on ",date)
       eggs <- eggs[1:length(cand_ani)]
-
+      if (length(cand_ani) == 0) eggs <- eggs[0]
     }
+    
     # Naive prior
     prior <- make_naive_prior(eggs$eggid, cand_ani)
     
