@@ -32,16 +32,6 @@ prep_data <- function(meta_ori,
   check_required_cols(meta, c("Start", "End", "Duration", "Layingtime", "Date",
                               "Animalmark", "Previousanimalmark"))
   
-  if (!is.null(ot_min)) {
-    if (is.null(from) | is.null(to)) {
-      stop("Please input time range for ot_min correction!")
-    }
-    if (!is.numeric(ot_min)) {
-      ot_min <- suppressWarnings(as.numeric(ot_min))
-      if (is.na(ot_min)) stop("ot_min must be a numeric value or NULL (default).")
-    }
-    ot_sec <- ot_min * 60
-  }
   
   # Make date & time format
   meta[, Date := as.Date(Date, format = dateformat)]
@@ -58,7 +48,27 @@ prep_data <- function(meta_ori,
   
   meta[, (time_cols) := lapply(.SD, hms::as_hms), .SDcols = time_cols]
   
+  
   # Correction for time
+  if (!is.null(ot_min) && ot_min == 0) ot_min <- NULL
+  
+  if (!is.null(ot_min)) {
+    if (!is.numeric(ot_min)) {
+      ot_min <- suppressWarnings(as.numeric(ot_min))
+      if (is.na(ot_min)) stop("ot_min must be a numeric value or NULL (default).")
+    }
+    ot_sec <- ot_min * 60
+    
+    if (is.null(from)) {
+      message("'from' is NULL, so correct ot_min from the beginning!")
+      from <- min(meta$Date)
+    }
+    if (is.null(to)) {
+      message("'to' is NULL, so correct ot_min till the last day!")
+      to <- max(meta$Date)
+    }
+  }
+  
   if (!is.null(from) | !is.null(to)) {
     cat("Correcting time from",as.character(from),"to",as.character(to))
   }
