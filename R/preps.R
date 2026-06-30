@@ -208,7 +208,7 @@ get_good_hand_eggcount <- function(meta_ori, hand_ori, from = NULL, to = NULL,
                                    Nestnumbers = 1:64, num_per_pen = 4,
                                    timezone = "Europe/Berlin",
                                    collect_min = 20,
-                                   fakeegg = FALSE) {
+                                   fakeegg_id = NULL) {
   
   if (!inherits(meta_ori, "data.table")) stop("`meta_ori` must be a data.table")
   if (!inherits(hand_ori, "data.table")) stop("`hand_ori` must be a data.table")
@@ -281,16 +281,17 @@ get_good_hand_eggcount <- function(meta_ori, hand_ori, from = NULL, to = NULL,
   }
   
   # Prepare fake egg time 
-  if (isTRUE(fakeegg)) {
-  markid <- meta[Animalmark == 0 & Eggsignal == 0, .N, by = Transponder][
-    order(-N)][N > 2 & !grepl("^0[ 0]*$", Transponder), Transponder][1]
-  print(sprintf("Fakeegg marker id: %s",markid))
+  if (!is.null(fakeegg_id)) {
+    markid <- fakeegg_id
+    
+    message(sprintf("Including Fakeegg marker id: %s",markid))
+    if (nchar(fakeegg_id) != 16) message("Check if fakeegg_id is correct? length should be 16. Trying...")
   } else markid <- NA
   
   if (!is.na(markid)) {
     fakeegg <- meta[Transponder == markid, .(Start, End), by = .(Date, pen, Nestnumber)]
     fakeegg[, diff := difftime(End, Start)]
-    if (nrow(fakeegg[diff < 0 | diff > 10]) > 0 ) warning("Fakeegg transponder last more than 10s")
+    if (nrow(fakeegg[diff < 0 | diff > 3600]) > 0 ) warning("Fakeegg transponder last more than 1 hour")
     
     if (nrow(fakeegg[Start < as_hms("06:00:00") | Start > as_hms("21:00:00")]) > 0 ) {
       warning("Fakeegg transponder start time < 6:00 or > 21:00")

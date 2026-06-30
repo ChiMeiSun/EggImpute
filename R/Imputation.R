@@ -396,7 +396,7 @@ get_imputed_laydates <- function(pen_meta, aniid,
   
   if (nrow(out) == 0) return(NULL)
   return(list(
-    out[, .(ani, Date, datelay, Layingtime, imp, p_perc = round(p_perc, 5))][order(Date)],
+    output = out[, .(ani, Date, datelay, Layingtime, imp, p_perc = round(p_perc, 5))][order(Date)],
     plot = if (plot) combined_plot else NULL
     ))
 }
