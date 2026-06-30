@@ -892,6 +892,7 @@ process_pen <- function(p, negg, meta, ani_info,
     
     # Pen/date egg count
     pendate_negg <- pen_negg[Date == date]
+    pensurdate_negg <- pen_negg[Date %in% c(date-1, date+1)]
     
     # Candidate animals in pen
     check_date(ani_info$Leave)
@@ -928,6 +929,24 @@ process_pen <- function(p, negg, meta, ani_info,
     
     # Remove trusted animals/eggs from candidates
     cand_ani <- cand_ani[!cand_ani %in% dt_trust$ani]
+    
+    # Looking backward and forward: Remove candi if it (had & will have) a trust record in the (prev & next) day
+    ani_tmp <- lapply(unique(pensurdate_negg$Date), function(d) {
+      negg_tmp <- pensurdate_negg[Date == d]
+      
+      from_tmp <- max(negg_tmp$date_time_pre)
+      to_tmp <- max(negg_tmp$date_time)
+      eggs_tmp <- negg_tmp[, .(Nest = c(rep(Nest, Nhand), rep(index_floornest, Nfloor[1])))]
+      eggs_tmp[, nestc := seq_len(.N), by = Nest]
+      eggs_tmp[, eggid := sprintf("%s%03d%02d", format(date, "%y%m%d"), Nest, nestc)]
+      eggs_tmp[, nestc := NULL]
+      dt_trust_tmp <- get_trusted_autonest(eggs_tmp, pen_meta, from_tmp, to_tmp)
+      
+      dt_trust_tmp$ani
+    })
+    
+    cand_ani <- cand_ani[!cand_ani %in% Reduce(intersect, ani_tmp) ]
+
     eggs <- eggs[!eggid %in% dt_trust$eid]
     
     ndiff_eggcand <- nrow(eggs) - length(cand_ani)
