@@ -389,12 +389,16 @@ get_imputed_laydates <- function(pen_meta, aniid,
         ggplot2::labs(title = aniid) +
         ggplot2::scale_color_manual(values = c("TRUE" = "tomato", "dups" = "steelblue1"))
       
-      print(g1 / g2)
+      combined_plot <- g1 / g2
+      print(combined_plot)
     }
   }
   
   if (nrow(out) == 0) return(NULL)
-  return(out[, .(ani, Date, datelay, Layingtime, imp, p_perc = round(p_perc, 5))][order(Date)])
+  return(list(
+    out[, .(ani, Date, datelay, Layingtime, imp, p_perc = round(p_perc, 5))][order(Date)],
+    plot = if (plot) combined_plot else NULL
+    ))
 }
 
 

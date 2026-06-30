@@ -33,26 +33,20 @@ prep_data <- function(meta_ori,
                               "Animalmark", "Previousanimalmark"))
   
   if (!is.null(ot_min)) {
+    if (is.null(from) | is.null(to)) {
+      stop("Please input time range for ot_min correction!")
+    }
     if (!is.numeric(ot_min)) {
       ot_min <- suppressWarnings(as.numeric(ot_min))
       if (is.na(ot_min)) stop("ot_min must be a numeric value or NULL (default).")
     }
-    ot_min <- hms::as_hms(ot_min * 60)
+    ot_sec <- ot_min * 60
   }
   
   # Make date & time format
   meta[, Date := as.Date(Date, format = dateformat)]
   if (any(is.na(meta$Date))) stop ("as.Date() failed! maybe dateformat is wrong!")
   meta[lubridate::year(Date) < 100, Date := update(Date, year = lubridate::year(Date) + 2000)]
-  
-  if (!is.null(from)) {
-    cat("subsetting data: Date >= ", as.character(from), "\n")
-    meta <- meta[Date >= as.Date(from)]
-  }
-  if (!is.null(to)) {
-    cat("subsetting data: Date <= ", as.character(to), "\n")
-    meta <- meta[Date <= as.Date(to)]
-  }
   
   time_cols <- c("Start", "End", "Duration", "Layingtime")
   
@@ -65,11 +59,17 @@ prep_data <- function(meta_ori,
   meta[, (time_cols) := lapply(.SD, hms::as_hms), .SDcols = time_cols]
   
   # Correction for time
+  if (!is.null(from) | !is.null(to)) {
+    cat("Correcting time from",as.character(from),"to",as.character(to))
+  }
   if (!is.null(ot_min)) {
     time_cols <- c("Start", "End", "Layingtime")
-    meta[, (time_cols) := lapply(.SD, function(x) hms::as_hms(x + ot_min)), .SDcols = time_cols]
+    meta[Date >= from & Date <= to,
+         (time_cols) := lapply(.SD, function(x) hms::as_hms(x + ot_sec)),
+         .SDcols = time_cols]
+    meta[Date >= from & Date <= to, ot_min := ot_min]
   }
-  
+  meta[is.na(ot_min), ot_min := 0]
 
   
   # Mark ani & pri/sec animals
