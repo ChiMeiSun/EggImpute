@@ -70,7 +70,7 @@ prep_data <- function(meta_ori,
   }
   
   if (!is.null(from) | !is.null(to)) {
-    cat("Correcting time from",as.character(from),"to",as.character(to))
+    message("Correcting time from",as.character(from),"to",as.character(to))
   }
   if (!is.null(ot_min)) {
     time_cols <- c("Start", "End", "Layingtime")
