@@ -301,7 +301,7 @@ get_good_hand_eggcount <- function(meta_ori, hand_ori, from = NULL, to = NULL,
   if (!is.na(markid)) {
     fakeegg <- meta[Transponder == markid, .(Start, End), by = .(Date, pen, Nestnumber)]
     fakeegg[, diff := difftime(End, Start)]
-    if (nrow(fakeegg[diff < 0 | diff > 3600]) > 0 ) warning("Fakeegg transponder last more than 1 hour")
+    if (nrow(fakeegg[abs(diff) > 3600]) > 0 ) warning("Fakeegg transponder last more than 1 hour")
     
     if (nrow(fakeegg[Start < as_hms("06:00:00") | Start > as_hms("21:00:00")]) > 0 ) {
       warning("Fakeegg transponder start time < 6:00 or > 21:00")
@@ -311,6 +311,17 @@ get_good_hand_eggcount <- function(meta_ori, hand_ori, from = NULL, to = NULL,
     }
     
     fakeegg <- fakeegg[, .SD[.N], by = .(Date, Nestnumber)]  # Avoid dups, get last record per nest/date
+    
+    # Remove outliers (technical issue?)
+    med <- fakeegg[, .(med = median(End, na.rm = TRUE) ), by = Date]
+    fakeegg <- fakeegg[med, , on = .(Date)]
+    fakeegg[, diff := End - med]
+    
+    if (nrow(fakeegg[abs(diff) > 2*60*60]) > 0) {
+      message("Fakeegg has records deviate >2h from median of that day (will be removed):")
+      print(fakeegg[abs(diff) > 2*60*60])
+      fakeegg <- fakeegg[!abs(diff) > 2*60*60]
+    }
     
     # Check fakeegg data
     fegg_dates <- sort(unique(fakeegg$Date))
