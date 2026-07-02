@@ -197,7 +197,8 @@ get_test_win <- function(start_date, end_date, min_days = 30) {
 #' @param num_per_pen Number of nests per pen (default: 4).
 #' @param timezone Time zone used for datetime conversion (default: `"Europe/Berlin"`).
 #' @param collect_min Total time needed in minutes for egg collection (default: 20).
-#' @param fakeegg TRUE/FALSE, if manual transponder for precise time record is available.
+#' @param fakeegg_id If manual transponder id for precise time record is available.
+#' @param extend_min Extension in minute for technical variety  (default: `10`).
 #'
 #' @return A `data.table` containing hand and automatic egg counts per nest and time interval.
 #' with the following key columns:
@@ -218,7 +219,8 @@ get_good_hand_eggcount <- function(meta_ori, hand_ori, from = NULL, to = NULL,
                                    Nestnumbers = 1:64, num_per_pen = 4,
                                    timezone = "Europe/Berlin",
                                    collect_min = 20,
-                                   fakeegg_id = NULL) {
+                                   fakeegg_id = NULL,
+                                   extend_min = 10) {
   
   if (!inherits(meta_ori, "data.table")) stop("`meta_ori` must be a data.table")
   if (!inherits(hand_ori, "data.table")) stop("`hand_ori` must be a data.table")
@@ -233,6 +235,7 @@ get_good_hand_eggcount <- function(meta_ori, hand_ori, from = NULL, to = NULL,
   minnest <- min(Nestnumbers)
   maxnest <- max(Nestnumbers)
   collect_min <- as.numeric(collect_min)
+  extend_min <- as.numeric(extend_min)
   npen <- maxnest %/% num_per_pen
   
   # prepare hand
@@ -400,6 +403,7 @@ get_good_hand_eggcount <- function(meta_ori, hand_ori, from = NULL, to = NULL,
   }
   
   setorder(tegg_hand, Pen, Nest, dtm_h)
+  tegg_hand[, dtm_h := dtm_h + extend_min*60]
   tegg_hand[, dtm_hpre := shift(dtm_h), by = .(Pen, Nest)]
   tegg_hand[is.na(dtm_hpre),
             dtm_hpre := as.POSIXct(paste(Date - 1, "18:00:00"), tz = timezone)]
