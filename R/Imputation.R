@@ -811,6 +811,7 @@ Norm_prior <- function(prior, result = "prob", index_floornest, pen_meta) {
 #' \describe{
 #'   \item{pen_priors}{Data.table of prior matrices for each date.}
 #'   \item{pen_trusted}{Data.table of trusted eggs for each date.}
+#'   \item{pen_rmegg}{Data.table of removed eggs due to insufficient candidates.}
 #' }
 #' @export
 #'
