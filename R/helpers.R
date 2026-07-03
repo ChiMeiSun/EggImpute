@@ -259,22 +259,6 @@ get_prob <- function(res_list) {
 }
 
 
-#' modify eid for floor eggs to get get unique eid even across pens
-#'
-#' @param dat A data.table contains `eid`(egg id), `pen`
-#' @export
-#' 
-modify_eid <- function(respp) {
-  dat <- copy(respp)
-  dat[, dddate := substr(eid,1,6)]
-  dat[, nnnest := substr(eid,7,9)]
-  dat[, ooord := substr(eid,10,11)]
-  dat[nnnest == "099", eid_modify := sprintf("%s%s%s",dddate,substr(paste0(pen,"99"),1,3),ooord)]
-  dat[, dddate := NULL]
-  dat[, nnnest := NULL]
-  dat[, ooord := NULL]
-  dat
-}
 
 #' Get trusted set from function "process_pen"
 #'
