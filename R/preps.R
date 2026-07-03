@@ -657,7 +657,7 @@ get_trusted_autonest <- function(eggs, pen_meta, from, to) {
   }
   
   autofilt_ani <- pen_meta[
-    datelay >= from & datelay <= to &
+    datelay > from & datelay <= to &
       Eggsignal > 0 & F_combined != TRUE,
     .(ani, type, pri_count, laydiffh_pre_pri, Date, Layingtime),
     by = Nestnumber
