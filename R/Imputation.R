@@ -885,6 +885,7 @@ process_pen <- function(p, negg, meta, ani_info,
   
   pen_priors <- list()
   pen_trusted <- list()
+  pen_rmegg <- list()
   
   for (d in seq_along(dates)) { 
     date <- dates[d]
@@ -892,7 +893,7 @@ process_pen <- function(p, negg, meta, ani_info,
     
     # Pen/date egg count
     pendate_negg <- pen_negg[Date == date]
-    pensurdate_negg <- pen_negg[Date %in% c(date-1, date+1)]
+    pensurdate_negg <- pen_negg[Date %in% c(date-1, date+1)][order(Date)]
     
     # Candidate animals in pen
     check_date(ani_info$Leave)
@@ -953,6 +954,12 @@ process_pen <- function(p, negg, meta, ani_info,
     # if more eggs than candidates, warning & remove extra egg(s)
     if (ndiff_eggcand > 0) {
       warning("Num.egg > Num.candidates! ",ndiff_eggcand," extra egg(s) for pen ",p," on ",date)
+      rmegg <- data.table(eggs[(length(cand_ani) + 1):nrow(eggs)],
+                          date = date,
+                          pen = p)
+      setnames(rmegg, "eggid", "eid")
+      pen_rmegg[[length(pen_rmegg) + 1]] <- rmegg
+      
       eggs <- eggs[1:length(cand_ani)]
       if (length(cand_ani) == 0) eggs <- eggs[0]
     }
@@ -1000,6 +1007,7 @@ process_pen <- function(p, negg, meta, ani_info,
   
   # Merge per pen results
   pen_trusted <- rbindlist(pen_trusted, fill = TRUE)
+  pen_rmegg <- rbindlist(pen_rmegg, fill = TRUE)
   
   pen_priors_dat <- rbindlist(lapply(pen_priors, function(mat) {
     dt <- as.data.table(mat, keep.rownames = "eid")
@@ -1018,7 +1026,8 @@ process_pen <- function(p, negg, meta, ani_info,
   
   return(list(
     pen_priors = pen_priors_dat,
-    pen_trusted = pen_trusted
+    pen_trusted = pen_trusted,
+    pen_rmegg = pen_rmegg
   ))
 }
 
