@@ -1267,14 +1267,15 @@ CV_pen <- function(pen_trusted_dat, reps = 2, k = 5, seed = 123,
           
           dt_trust_tmp
         })
-        
         ani_tmp <- rbindlist(ani_tmp, fill = TRUE)
+        if (nrow(ani_tmp) > 0) {
         ani_tmp[, diff_hours := as.numeric(difftime(datelay[2], datelay[1], units = "hours")), by = ani]
         tmpid <- ani_tmp[datelay_exd < from | datelay_exd > to |
                            diff_hours < 2*thrd_laydiff*60*60, 
                          ani]
-        
+         
         cand_ani <- cand_ani[!cand_ani %in% tmpid]
+        }
         
         eggs <- eggs[!eggid %in% dt_trust_new$eid]
         
