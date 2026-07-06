@@ -955,13 +955,18 @@ process_pen <- function(p, negg, meta, ani_info,
       dt_trust_tmp <- get_trusted_autonest(eggs_tmp, pen_meta, from_tmp, to_tmp)
       if (nrow(dt_trust_tmp) > 0) {
         dt_trust_tmp[, datelay_exd := datelay + dir*thrd_laydiff*60*60]
-        tmpid <- dt_trust_tmp[datelay_exd < from | datelay_exd > to, ani]
-      } else tmpid <- c()
+      } 
       
-      tmpid
+      dt_trust_tmp
     })
     
-    cand_ani <- cand_ani[!cand_ani %in% unlist(ani_tmp) ]
+    ani_tmp <- rbindlist(ani_tmp, fill = TRUE)
+    ani_tmp[, diff_hours := as.numeric(difftime(datelay[2], datelay[1], units = "hours")), by = ani]
+    tmpid <- ani_tmp[datelay_exd < from | datelay_exd > to |
+                       diff_hours < 2*thrd_laydiff*60*60, 
+                     ani]
+
+    cand_ani <- cand_ani[!cand_ani %in% tmpid]
 
     eggs <- eggs[!eggid %in% dt_trust$eid]
     
@@ -1258,15 +1263,20 @@ CV_pen <- function(pen_trusted_dat, reps = 2, k = 5, seed = 123,
           dt_trust_tmp <- get_trusted_autonest(eggs_tmp, pen_meta, from_tmp, to_tmp)
           if (nrow(dt_trust_tmp) > 0) {
             dt_trust_tmp[, datelay_exd := datelay + dir*thrd_laydiff*60*60]
-            tmpid <- dt_trust_tmp[datelay_exd < from | datelay_exd > to, ani]
-          } else tmpid <- c()
+          } 
           
-          tmpid
+          dt_trust_tmp
         })
         
-        cand_ani <- cand_ani[!cand_ani %in% unlist(ani_tmp) ]
-        eggs <- eggs[!eggid %in% dt_trust_new$eid]
+        ani_tmp <- rbindlist(ani_tmp, fill = TRUE)
+        ani_tmp[, diff_hours := as.numeric(difftime(datelay[2], datelay[1], units = "hours")), by = ani]
+        tmpid <- ani_tmp[datelay_exd < from | datelay_exd > to |
+                           diff_hours < 2*thrd_laydiff*60*60, 
+                         ani]
         
+        cand_ani <- cand_ani[!cand_ani %in% tmpid]
+        
+        eggs <- eggs[!eggid %in% dt_trust_new$eid]
         
         
         # Naive prior
