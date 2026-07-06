@@ -12,6 +12,7 @@ process_pen(
   ignore_anis = c(),
   index_floornest = 99,
   max_ani_pen = 21,
+  thrd_laydiff = 22,
   ani_impeggs,
   weight_imd = 1,
   factor_imd = 1,
@@ -42,6 +43,8 @@ process_pen(
 
 \item{max_ani_pen}{Maximum allowed number of candidates per pen. A control to check \code{ani_info} (default: 21).}
 
+\item{thrd_laydiff}{Minimum threshold in hours for two laying interval (trusted)  (default: 22).}
+
 \item{ani_impeggs}{data.table of imputed laying dates.}
 
 \item{weight_imd}{For prior update using imputed laying dates: Weight (default: 1).}
@@ -71,8 +74,9 @@ process_pen(
 \value{
 A list with:
 \describe{
-\item{pen_priors}{Data.table of prior matrices for each date.}
+\item{pen_priors}{Data.table of priors for each date.}
 \item{pen_trusted}{Data.table of trusted eggs for each date.}
+\item{pen_rmegg}{Data.table of removed eggs due to insufficient candidates.}
 }
 }
 \description{

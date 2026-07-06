@@ -14,7 +14,8 @@ get_good_hand_eggcount(
   num_per_pen = 4,
   timezone = "Europe/Berlin",
   collect_min = 20,
-  fakeegg = FALSE
+  fakeegg_id = NULL,
+  extend_min = 10
 )
 }
 \arguments{
@@ -30,7 +31,9 @@ get_good_hand_eggcount(
 
 \item{collect_min}{Total time needed in minutes for egg collection (default: 20).}
 
-\item{fakeegg}{TRUE/FALSE, if manual transponder for precise time record is available.}
+\item{fakeegg_id}{If manual transponder id for precise time record is available.}
+
+\item{extend_min}{Extension in minute for technical variety  (default: \code{10}).}
 
 \item{meta}{A \code{data.table} containing autonest data after prep_data.}
 

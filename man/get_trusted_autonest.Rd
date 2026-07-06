@@ -16,7 +16,7 @@ get_trusted_autonest(eggs, pen_meta, from, to)
 \item{to}{POSIXct end datetime.}
 }
 \value{
-\code{data.table} with columns: \code{eid}, \code{ani}, \code{layingtime}, \code{type}.
+\code{data.table} with columns: \code{eid}, \code{ani}, \code{layingtime}, \code{type}, \code{datelay}.
 }
 \description{
 Filters autonest data to identify "trusted" candidate animals for each egg
