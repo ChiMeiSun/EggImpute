@@ -925,7 +925,7 @@ process_pen <- function(p, negg, meta, ani_info,
     eggs[, eggid := sprintf("%s%03d%02d", format(date, "%y%m%d"), Nest, nestc)]
     eggs[, nestc := NULL]
     
-    if (nrow(eggs) == 0) break
+    if (nrow(eggs) == 0) next
     
     from <- max(pendate_negg$date_time_pre)
     to <- max(pendate_negg$date_time)
@@ -1082,6 +1082,7 @@ Add_cv_folds <- function(dt, k = 5, seed = 123) {
 #' @param ignore_anis Animal marks in the autonest data to be ignored when imputing (default: c()).
 #' @param index_floornest Integer ID used for floor eggs (default: 99).
 #' @param max_ani_pen Maximum allowed number of candidates per pen. A control to check `ani_info` (default: 21).
+#' @param thrd_laydiff Minimum threshold in hours for two laying interval (trusted)  (default: 22).
 #' @param ani_impeggs data.table of imputed laying dates.
 #' @param weight_imd For prior update using imputed laying dates: Weight (default: 1).
 #' @param factor_imd For prior update using imputed laying dates: factor (default: 1).
@@ -1104,6 +1105,7 @@ CV_pen <- function(pen_trusted_dat, reps = 2, k = 5, seed = 123,
                    ignore_anis = c(),
                    index_floornest = 99,
                    max_ani_pen = 21,
+                   thrd_laydiff = 22,
                    ani_impeggs, weight_imd = 1, factor_imd = 1, p_perc_dups = 50,
                    nearby_days = 2, penalty_weight = 0.3, max_penalty = 0.6, 
                    weight_nl = 0.8, factor_nl = 1,
@@ -1189,6 +1191,7 @@ CV_pen <- function(pen_trusted_dat, reps = 2, k = 5, seed = 123,
         
         # Pen/date egg count
         pendate_negg <- pen_negg[Date == date]
+        pensurdate_negg <- pen_negg[Date %in% c(date-1, date+1)][order(Date)]
         
         # Candidate animals in pen
         check_date(ani_info$Leave)
@@ -1217,27 +1220,54 @@ CV_pen <- function(pen_trusted_dat, reps = 2, k = 5, seed = 123,
         eggs[, eggid := sprintf("%s%03d%02d", format(date, "%y%m%d"), Nest, nestc)]
         eggs[, nestc := NULL]
         
+        if (nrow(eggs) == 0) next
+        
         # Trusted pairs from autonest
         from <- min(pendate_negg$date_time_pre)
         to <- max(pendate_negg$date_time)
         dt_trust <- get_trusted_autonest(eggs, pen_meta, from, to)
         
-        if (nrow(dt_trust) == 0) {
-          next
-        }
-        
+        if (nrow(dt_trust) == 0) next
+
         # Mark down the trust rows which will be masked
         masked_rows <- dt_trust[mask_info, on = .(eid, ani), nomatch = NULL]
-        if (nrow(masked_rows) == 0) {
-          next
-        }
-        
+        if (nrow(masked_rows) == 0) next
+
         # Remove the trust rows if it exists in mask_info
         dt_trust_new <- dt_trust[!mask_info, on = .(eid)]
         
         # Remove trusted animals/eggs from candidates
         cand_ani <- cand_ani[!cand_ani %in% dt_trust_new$ani]
+        
+        # Looking before and after
+        # Remove candi if it had a trust record in the prev/next day, and by adding/subtracting threshold hours its outside today's range
+        ani_tmp <- lapply(unique(pensurdate_negg$Date), function(d) {
+          if (d < date) {
+            dir <- 1
+          } else {
+            dir <- -1
+          }
+          negg_tmp <- pensurdate_negg[Date == d]
+          
+          from_tmp <- max(negg_tmp$date_time_pre)
+          to_tmp <- max(negg_tmp$date_time)
+          eggs_tmp <- negg_tmp[, .(Nest = c(rep(Nest, Nhand), rep(index_floornest, Nfloor[1])))]
+          eggs_tmp[, nestc := seq_len(.N), by = Nest]
+          eggs_tmp[, eggid := sprintf("%s%03d%02d", format(date, "%y%m%d"), Nest, nestc)]
+          eggs_tmp[, nestc := NULL]
+          dt_trust_tmp <- get_trusted_autonest(eggs_tmp, pen_meta, from_tmp, to_tmp)
+          if (nrow(dt_trust_tmp) > 0) {
+            dt_trust_tmp[, datelay_exd := datelay + dir*thrd_laydiff*60*60]
+            tmpid <- dt_trust_tmp[datelay_exd < from | datelay_exd > to, ani]
+          } else tmpid <- c()
+          
+          tmpid
+        })
+        
+        cand_ani <- cand_ani[!cand_ani %in% unlist(ani_tmp) ]
         eggs <- eggs[!eggid %in% dt_trust_new$eid]
+        
+        
         
         # Naive prior
         prior <- make_naive_prior(eggs$eggid, cand_ani)
@@ -1299,9 +1329,15 @@ CV_pen <- function(pen_trusted_dat, reps = 2, k = 5, seed = 123,
         masked_rows[topx, on = .(ani, nest), 
                     `:=`(topx = TRUE, prior = i.prior)
         ][is.na(topx), topx := FALSE][, rep := r]
-        # rm dup cols
-        names(masked_rows) <- gsub("^i\\.", "", names(masked_rows))
         
+        # topx2: if still assigned an egg but different nest number
+        masked_rows[melted_prior[, .(ani, prior)], on = .(ani), 
+                    `:=`(topx2 = TRUE, prior2 = i.prior)
+        ][is.na(topx2), topx2 := FALSE]
+                    
+        # rm dup cols
+        masked_rows[, (grep("^i\\.", names(masked_rows))) := NULL]
+
         masked_res[[length(masked_res) + 1]] <- masked_rows
       }
     }
