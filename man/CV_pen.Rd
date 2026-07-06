@@ -16,6 +16,7 @@ CV_pen(
   ignore_anis = c(),
   index_floornest = 99,
   max_ani_pen = 21,
+  thrd_laydiff = 22,
   ani_impeggs,
   weight_imd = 1,
   factor_imd = 1,
@@ -51,6 +52,8 @@ CV_pen(
 \item{index_floornest}{Integer ID used for floor eggs (default: 99).}
 
 \item{max_ani_pen}{Maximum allowed number of candidates per pen. A control to check \code{ani_info} (default: 21).}
+
+\item{thrd_laydiff}{Minimum threshold in hours for two laying interval (trusted)  (default: 22).}
 
 \item{ani_impeggs}{data.table of imputed laying dates.}
 
