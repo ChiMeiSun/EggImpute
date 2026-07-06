@@ -925,6 +925,8 @@ process_pen <- function(p, negg, meta, ani_info,
     eggs[, eggid := sprintf("%s%03d%02d", format(date, "%y%m%d"), Nest, nestc)]
     eggs[, nestc := NULL]
     
+    if (nrow(eggs) == 0) break
+    
     from <- max(pendate_negg$date_time_pre)
     to <- max(pendate_negg$date_time)
     
@@ -951,8 +953,12 @@ process_pen <- function(p, negg, meta, ani_info,
       eggs_tmp[, eggid := sprintf("%s%03d%02d", format(date, "%y%m%d"), Nest, nestc)]
       eggs_tmp[, nestc := NULL]
       dt_trust_tmp <- get_trusted_autonest(eggs_tmp, pen_meta, from_tmp, to_tmp)
-      dt_trust_tmp[, datelay_exd := datelay + dir*thrd_laydiff*60*60]
-      dt_trust_tmp[datelay_exd < from | datelay_exd > to, ani]
+      if (nrow(dt_trust_tmp) > 0) {
+        dt_trust_tmp[, datelay_exd := datelay + dir*thrd_laydiff*60*60]
+        tmpid <- dt_trust_tmp[datelay_exd < from | datelay_exd > to, ani]
+      } else tmpid <- c()
+      
+      tmpid
     })
     
     cand_ani <- cand_ani[!cand_ani %in% unlist(ani_tmp) ]
