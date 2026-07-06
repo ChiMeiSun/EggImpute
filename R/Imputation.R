@@ -793,6 +793,7 @@ Norm_prior <- function(prior, result = "prob", index_floornest, pen_meta) {
 #' @param ignore_anis Animal marks in the autonest data to be ignored when imputing (default: c()).
 #' @param index_floornest Integer ID used for floor eggs (default: 99).
 #' @param max_ani_pen Maximum allowed number of candidates per pen. A control to check `ani_info` (default: 21).
+#' @param thrd_laydiff Minimum threshold in hours for two laying interval (trusted)  (default: 22).
 #' @param ani_impeggs data.table of imputed laying dates.
 #' @param weight_imd For prior update using imputed laying dates: Weight (default: 1).
 #' @param factor_imd For prior update using imputed laying dates: factor (default: 1).
@@ -809,7 +810,7 @@ Norm_prior <- function(prior, result = "prob", index_floornest, pen_meta) {
 #'
 #' @return A list with:
 #' \describe{
-#'   \item{pen_priors}{Data.table of prior matrices for each date.}
+#'   \item{pen_priors}{Data.table of priors for each date.}
 #'   \item{pen_trusted}{Data.table of trusted eggs for each date.}
 #'   \item{pen_rmegg}{Data.table of removed eggs due to insufficient candidates.}
 #' }

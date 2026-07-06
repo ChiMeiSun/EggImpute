@@ -631,7 +631,7 @@ Add_filter_flag <- function(meta,
 #' @param from POSIXct start datetime.
 #' @param to POSIXct end datetime.
 #'
-#' @return `data.table` with columns: `eid`, `ani`, `layingtime`, `type`.
+#' @return `data.table` with columns: `eid`, `ani`, `layingtime`, `type`, `datelay`.
 #' @export
 #'
 get_trusted_autonest <- function(eggs, pen_meta, from, to) {
