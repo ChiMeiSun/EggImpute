@@ -961,13 +961,15 @@ process_pen <- function(p, negg, meta, ani_info,
     })
     
     ani_tmp <- rbindlist(ani_tmp, fill = TRUE)
-    ani_tmp[, diff_hours := as.numeric(difftime(datelay[2], datelay[1], units = "hours")), by = ani]
-    tmpid <- ani_tmp[datelay_exd < from | datelay_exd > to |
-                       diff_hours < 2*thrd_laydiff*60*60, 
-                     ani]
-
-    cand_ani <- cand_ani[!cand_ani %in% tmpid]
-
+    if (nrow(ani_tmp) > 0) {
+      ani_tmp[, diff_hours := as.numeric(difftime(datelay[2], datelay[1], units = "hours")), by = ani]
+      tmpid <- ani_tmp[datelay_exd < from | datelay_exd > to |
+                         diff_hours < 2*thrd_laydiff*60*60, 
+                       ani]
+      
+      cand_ani <- cand_ani[!cand_ani %in% tmpid]
+    }
+    
     eggs <- eggs[!eggid %in% dt_trust$eid]
     
     ndiff_eggcand <- nrow(eggs) - length(cand_ani)
