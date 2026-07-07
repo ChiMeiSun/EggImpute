@@ -939,6 +939,7 @@ process_pen <- function(p, negg, meta, ani_info,
     # Looking before and after
     # Remove candi if it had a trust record in the prev/next day, and by adding/subtracting threshold hours its outside today's range
     ani_tmp <- lapply(unique(pensurdate_negg$Date), function(d) {
+      
       if (d < date) {
         dir <- 1
       } else {
@@ -964,10 +965,21 @@ process_pen <- function(p, negg, meta, ani_info,
     if (nrow(ani_tmp) > 0) {
       ani_tmp[, diff_hours := as.numeric(difftime(datelay[2], datelay[1], units = "hours")), by = ani]
       tmpid <- ani_tmp[datelay_exd < from | datelay_exd > to |
-                         diff_hours < 2*thrd_laydiff*60*60, 
-                       ani]
-      
+                         diff_hours < 2*thrd_laydiff
+                       ,ani]
+
       cand_ani <- cand_ani[!cand_ani %in% tmpid]
+    }
+    # (for messy data) rm cand if trust on date+1 is actually on date, and it has a imp on date-1
+    if (length(pen_priors) > 0 && norm_result == "assign") {
+      tmppp <- pen_priors[[length(pen_priors)]]
+      id1 <- colnames(tmppp)[colSums(tmppp == 1) > 0]
+      
+      d <- date
+      id2 <- ani_tmp[ani %in% cand_ani & date == d, ani]
+      rmid <- id2[id2 %in% id1]
+      
+      cand_ani <- cand_ani[!cand_ani %in% rmid]
     }
     
     eggs <- eggs[!eggid %in% dt_trust$eid]
