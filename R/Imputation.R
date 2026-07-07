@@ -931,7 +931,7 @@ process_pen <- function(p, negg, meta, ani_info,
     to <- max(pendate_negg$date_time)
     
     # Trusted eggs from autonest
-    dt_trust <- get_trusted_autonest(eggs, pen_meta, from, to)
+    dt_trust <- get_trusted_autonest(eggs, pen_meta[ani %in% cand_ani], from, to)
     
     # Remove trusted animals/eggs from candidates
     eggs <- eggs[!eggid %in% dt_trust$eid]
@@ -955,7 +955,7 @@ process_pen <- function(p, negg, meta, ani_info,
       eggs_tmp[, nestc := seq_len(.N), by = Nest]
       eggs_tmp[, eggid := sprintf("%s%03d%02d", format(date, "%y%m%d"), Nest, nestc)]
       eggs_tmp[, nestc := NULL]
-      dt_trust_tmp <- get_trusted_autonest(eggs_tmp, pen_meta, from_tmp, to_tmp)
+      dt_trust_tmp <- get_trusted_autonest(eggs_tmp, pen_meta[ani %in% cand_ani], from_tmp, to_tmp)
       if (nrow(dt_trust_tmp) > 0) {
         dt_trust_tmp[, datelay_exd := datelay + dir*thrd_laydiff*60*60]
       } 
@@ -1246,7 +1246,7 @@ CV_pen <- function(pen_trusted_dat, reps = 2, k = 5, seed = 123,
         # Trusted pairs from autonest
         from <- min(pendate_negg$date_time_pre)
         to <- max(pendate_negg$date_time)
-        dt_trust <- get_trusted_autonest(eggs, pen_meta, from, to)
+        dt_trust <- get_trusted_autonest(eggs, pen_meta[ani %in% cand_ani], from, to)
         
         if (nrow(dt_trust) == 0) next
 
@@ -1279,7 +1279,7 @@ CV_pen <- function(pen_trusted_dat, reps = 2, k = 5, seed = 123,
           eggs_tmp[, nestc := seq_len(.N), by = Nest]
           eggs_tmp[, eggid := sprintf("%s%03d%02d", format(date, "%y%m%d"), Nest, nestc)]
           eggs_tmp[, nestc := NULL]
-          dt_trust_tmp <- get_trusted_autonest(eggs_tmp, pen_meta, from_tmp, to_tmp)
+          dt_trust_tmp <- get_trusted_autonest(eggs_tmp, pen_meta[ani %in% cand_ani], from_tmp, to_tmp)
           if (nrow(dt_trust_tmp) > 0) {
             dt_trust_tmp[, datelay_exd := datelay + dir*thrd_laydiff*60*60]
           } 
@@ -1308,7 +1308,6 @@ CV_pen <- function(pen_trusted_dat, reps = 2, k = 5, seed = 123,
             cand_ani <- cand_ani[!cand_ani %in% rmid]
           }
         }
-        
         
         
         # Naive prior
