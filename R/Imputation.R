@@ -969,19 +969,19 @@ process_pen <- function(p, negg, meta, ani_info,
                        ,ani]
 
       cand_ani <- cand_ani[!cand_ani %in% tmpid]
-    }
-    # (for messy data) rm cand if trust on date+1 is actually on date, and it has a imp on date-1
-    if (length(pen_priors) > 0 && norm_result == "assign") {
-      tmppp <- pen_priors[[length(pen_priors)]]
-      id1 <- colnames(tmppp)[colSums(tmppp == 1) > 0]
-      
-      d <- date
-      id2 <- ani_tmp[ani %in% cand_ani & date == d, ani]
-      rmid <- id2[id2 %in% id1]
-      
-      cand_ani <- cand_ani[!cand_ani %in% rmid]
-    }
     
+      # (for messy data) rm cand if trust on date+1 is actually on date, and it has a imp on date-1
+      if (length(pen_priors) > 0 && norm_result == "assign") {
+        tmppp <- pen_priors[[length(pen_priors)]]
+        id1 <- colnames(tmppp)[colSums(tmppp == 1) > 0]
+        
+        d <- date
+        id2 <- ani_tmp[ani %in% cand_ani & date == d, ani]
+        rmid <- id2[id2 %in% id1]
+        
+        cand_ani <- cand_ani[!cand_ani %in% rmid]
+      }
+    }
     eggs <- eggs[!eggid %in% dt_trust$eid]
     
     ndiff_eggcand <- nrow(eggs) - length(cand_ani)
@@ -1291,20 +1291,19 @@ CV_pen <- function(pen_trusted_dat, reps = 2, k = 5, seed = 123,
                            ,ani]
           
           cand_ani <- cand_ani[!cand_ani %in% tmpid]
+
+          # (for messy data) rm cand if trust on date+1 is actually on date, and it has a imp on date-1
+          if (length(pen_priors) > 0 && norm_result == "assign") {
+            tmppp <- pen_priors[[length(pen_priors)]]
+            id1 <- colnames(tmppp)[colSums(tmppp == 1) > 0]
+            
+            d <- date
+            id2 <- ani_tmp[ani %in% cand_ani & date == d, ani]
+            rmid <- id2[id2 %in% id1]
+            
+            cand_ani <- cand_ani[!cand_ani %in% rmid]
+          }
         }
-        
-        # (for messy data) rm cand if trust on date+1 is actually on date, and it has a imp on date-1
-        if (length(pen_priors) > 0 && norm_result == "assign") {
-          tmppp <- pen_priors[[length(pen_priors)]]
-          id1 <- colnames(tmppp)[colSums(tmppp == 1) > 0]
-          
-          d <- date
-          id2 <- ani_tmp[ani %in% cand_ani & date == d, ani]
-          rmid <- id2[id2 %in% id1]
-          
-          cand_ani <- cand_ani[!cand_ani %in% rmid]
-        }
-        
         
         eggs <- eggs[!eggid %in% dt_trust_new$eid]
         
