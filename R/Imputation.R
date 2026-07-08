@@ -935,7 +935,6 @@ process_pen <- function(p, negg, meta, ani_info,
     
     # Remove trusted animals/eggs from candidates
     eggs <- eggs[!eggid %in% dt_trust$eid]
-    if (nrow(eggs) == 0) next
     cand_ani <- cand_ani[!cand_ani %in% dt_trust$ani]
     
     # Looking before and after
@@ -1259,7 +1258,6 @@ CV_pen <- function(pen_trusted_dat, reps = 2, k = 5, seed = 123,
         
         # Remove trusted animals/eggs from candidates
         eggs <- eggs[!eggid %in% dt_trust_new$eid]
-        if (nrow(eggs) == 0) next
         cand_ani <- cand_ani[!cand_ani %in% dt_trust_new$ani]
         
         # Looking before and after
