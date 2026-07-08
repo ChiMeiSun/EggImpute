@@ -277,6 +277,19 @@ get_trusted <- function(res_list) {
 
 
 
+#' Get removed eggs from function "process_pen"
+#'
+#' @param res_list A list contains "pen_priors" and "pen_trusted" output by pen
+#'
+#' @return A data.table of results,`Nest`, `eid`(egg id), `date`, `pen`
+#' @export
+#'
+get_rmegg <- function(res_list) {
+  data.table::rbindlist(lapply(res_list, function(pen) {
+    x <- pen$pen_rmegg
+  }))
+}
+
 #' Get prob/assign results as a data table
 #'
 #' @param res_list A list contains "pen_priors" and "pen_trusted" output by pen
