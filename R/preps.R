@@ -70,7 +70,7 @@ prep_data <- function(meta_ori,
   }
   
   if (!is.null(from) | !is.null(to)) {
-    message("Correcting time from",as.character(from),"to",as.character(to))
+    message("Correcting time from ",as.character(from)," to ",as.character(to))
   }
   if (!is.null(ot_min)) {
     time_cols <- c("Start", "End", "Layingtime")
@@ -549,7 +549,7 @@ Add_filter_flag <- function(meta,
     sprintf("%s %s", Date, Layingtime), 
     format = "%Y-%m-%d %H:%M:%S", tz = timezone)]
   setorder(meta, ani, datelay)
-  
+
   meta[Eggsignal > 0,
        laydiffh_pre_all := as.numeric((datelay - shift(datelay, type = "lag")), units = "hours"),
        by = ani]
@@ -560,6 +560,21 @@ Add_filter_flag <- function(meta,
   
   meta[Eggsignal > 0 & type == "sec",
        F4_laydiff_short := (laydiffh_pre_all < thrd | laydiffh_nxt_all < thrd)]
+ 
+  ## flag whether the neighboring record (within Eggsignal>0, by ani) is F2_latelay & F3_ani_cbd_dup
+  meta[Eggsignal > 0,
+       `:=`(
+         prev_invalid = (shift(F2_latelay, type = "lag")  %in% TRUE) |
+           (shift(F3_ani_cbd_dup, type = "lag")  %in% TRUE),
+         next_invalid = (shift(F2_latelay, type = "lead") %in% TRUE) |
+           (shift(F3_ani_cbd_dup, type = "lead") %in% TRUE)
+       ),
+       by = ani]
+  
+  ## rm flag when the relevant neighbor is invalid
+  meta[Eggsignal > 0 & type == "sec" & prev_invalid == TRUE, F4_laydiff_short := FALSE]
+  meta[Eggsignal > 0 & type == "sec" & next_invalid == TRUE, F4_laydiff_short := FALSE]
+  meta[, c("prev_invalid", "next_invalid") := NULL]
   
   meta[Eggsignal > 0 & type == "pri",
        laydiffh_pre_pri := as.numeric((datelay - shift(datelay, type = "lag")), units = "hours"),
