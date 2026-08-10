@@ -540,8 +540,12 @@ Add_filter_flag <- function(meta,
   meta[Eggsignal > 0, F2_latelay := (Layingtime > end_time * 3600 | Layingtime < start_time * 3600)]
   
   # 3 (flag only eggs) with >1 egg count per day
-  meta[Eggsignal > 0, ani_cbd := .N, by = .(Date, ani, type)]
+  meta[Eggsignal > 0, ani_cbd := .N, by = .(Date, ani)]
   meta[, F3_ani_cbd_dup := ani_cbd > 1]
+  ## if exactly one pri record in the group, that pri row is not a duplicate
+  meta[Eggsignal > 0, pri_cbd := sum(type == "pri"), by = .(Date, ani)]
+  meta[Eggsignal > 0 & type == "pri" & pri_cbd == 1, F3_ani_cbd_dup := FALSE]
+  meta[, pri_cbd := NULL]
   
   # 4 (flag only "sec" eggs) with laying time diff < thrd
   thrd <- thrd_laydiff
@@ -676,6 +680,21 @@ get_trusted_autonest <- function(eggs, pen_meta, from, to) {
       Eggsignal > 0 & F_combined != TRUE,
     .(ani, type, pri_count, laydiffh_pre_pri, Date, Layingtime, datelay),
     by = Nestnumber
+  ]
+  # rm dup
+  autofilt_ani <- autofilt_ani[
+    , {
+      if (.N == 1) {
+        .SD
+      } else if (any(type == "pri")) {
+        .SD[type == "pri"][order(laydiffh_pre_pri)][1]
+      } else if (any(type == "sec")) {
+        .SD[type == "sec"][order(-pri_count)][1]
+      } else {
+        .SD[1]   # see note below
+      }
+    },
+    by = ani
   ]
   
   nestorder <- autofilt_ani[, .N, by = .(Nestnumber, type)][
