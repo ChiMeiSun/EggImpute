@@ -889,8 +889,9 @@ process_pen <- function(p, negg, meta, ani_info,
   pen_priors <- list()
   pen_trusted <- list()
   pen_rmegg <- list()
-  
-  for (d in seq_along(dates)) { 
+  prev_prior <- NULL
+
+  for (d in seq_along(dates)) {
     date <- dates[d]
     date <- as.Date(date)
     
@@ -957,23 +958,24 @@ process_pen <- function(p, negg, meta, ani_info,
       dt_trust_tmp <- get_trusted_autonest(eggs_tmp, pen_meta[ani %in% cand_ani], from_tmp, to_tmp)
       if (nrow(dt_trust_tmp) > 0) {
         dt_trust_tmp[, datelay_exd := datelay + dir*thrd_laydiff*60*60]
-      } 
-      
+        dt_trust_tmp[, dir := dir]
+      }
+
       dt_trust_tmp
     })
-    
+
     ani_tmp <- rbindlist(ani_tmp, fill = TRUE)
     if (nrow(ani_tmp) > 0) {
       ani_tmp[, diff_hours := as.numeric(difftime(datelay[2], datelay[1], units = "hours")), by = ani]
-      tmpid <- ani_tmp[datelay_exd < from | datelay_exd > to |
+      tmpid <- ani_tmp[(dir == 1 & datelay_exd > to) | (dir == -1 & datelay_exd < from) |
                          diff_hours < 2*thrd_laydiff
                        ,ani]
 
       cand_ani <- cand_ani[!cand_ani %in% tmpid]
     
       # (for messy data) rm cand if trust on date+1 is actually on date, and it has a imp on date-1
-      if (length(pen_priors) > 0 && norm_result == "assign") {
-        tmppp <- pen_priors[[length(pen_priors)]]
+      if (!is.null(prev_prior) && norm_result == "assign") {
+        tmppp <- prev_prior
         id1 <- colnames(tmppp)[colSums(tmppp == 1) > 0]
         
         d <- date
@@ -1035,6 +1037,7 @@ process_pen <- function(p, negg, meta, ani_info,
     if (nrow(prior) > 0) {
       pen_priors[[length(pen_priors) + 1]] <- prior
     }
+    prev_prior <- prior
     if (nrow(dt_trust) > 0) {
       pen_trusted[[length(pen_trusted) + 1]] <- data.table(dt_trust, pen = p)
     }
@@ -1204,8 +1207,9 @@ CV_pen <- function(pen_trusted_dat, reps = 2, k = 5, seed = 123,
     for (f in seq_len(k)) {
       cat("Pen:", p, ", rep =", r, ", fold =", f, ", seed =", seed, "\n")
       mask_info <- pen_trusted_dat[fold == f]
-      
-      for (d in seq_along(dates)) { 
+      prev_prior <- NULL
+
+      for (d in seq_along(dates)) {
         date <- dates[d]
         date <- as.Date(date)
         
@@ -1280,23 +1284,24 @@ CV_pen <- function(pen_trusted_dat, reps = 2, k = 5, seed = 123,
           dt_trust_tmp <- get_trusted_autonest(eggs_tmp, pen_meta[ani %in% cand_ani], from_tmp, to_tmp)
           if (nrow(dt_trust_tmp) > 0) {
             dt_trust_tmp[, datelay_exd := datelay + dir*thrd_laydiff*60*60]
-          } 
-          
+            dt_trust_tmp[, dir := dir]
+          }
+
           dt_trust_tmp
         })
-        
+
         ani_tmp <- rbindlist(ani_tmp, fill = TRUE)
         if (nrow(ani_tmp) > 0) {
           ani_tmp[, diff_hours := as.numeric(difftime(datelay[2], datelay[1], units = "hours")), by = ani]
-          tmpid <- ani_tmp[datelay_exd < from | datelay_exd > to |
+          tmpid <- ani_tmp[(dir == 1 & datelay_exd > to) | (dir == -1 & datelay_exd < from) |
                              diff_hours < 2*thrd_laydiff
                            ,ani]
-          
+
           cand_ani <- cand_ani[!cand_ani %in% tmpid]
 
           # (for messy data) rm cand if trust on date+1 is actually on date, and it has a imp on date-1
-          if (length(pen_priors) > 0 && norm_result == "assign") {
-            tmppp <- pen_priors[[length(pen_priors)]]
+          if (!is.null(prev_prior) && norm_result == "assign") {
+            tmppp <- prev_prior
             id1 <- colnames(tmppp)[colSums(tmppp == 1) > 0]
             
             d <- date
@@ -1338,7 +1343,9 @@ CV_pen <- function(pen_trusted_dat, reps = 2, k = 5, seed = 123,
         if (length(bad) > 0) {
           warning("Date ", date, ": prob per egg (rowSums) > 1")
         }
-        
+
+        prev_prior <- prior
+
         # Merge to compare masked_rows priors
         dt <- as.data.table(prior, keep.rownames = "eid")
         melted_prior <- melt(dt, 
