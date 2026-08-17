@@ -42,8 +42,9 @@ prep_data <- function(meta_ori,
   
   # Make empty time as NA
   meta[, (time_cols) := lapply(.SD, function(x) {
+    if (inherits(x, "POSIXct")) x <- format(x, "%H:%M:%S")   # POSIXct -> "HH:MM:SS" character; NA stays NA
     x[x == "" | is.na(x)] <- NA_character_
-    return(x)
+    x
   }), .SDcols = time_cols]
   
   meta[, (time_cols) := lapply(.SD, hms::as_hms), .SDcols = time_cols]
