@@ -18,22 +18,10 @@ collect_min <- as.numeric(median(hand_demo$Time_end - hand_demo$Time_start) / 60
 
 Nestnumbers <- sort(unique(meta_demo$Nestnumber))
 
-######### find the best off time to adjust the autonest clock (optional) #########
-ot_res <- find_best_ot_min(meta_demo, hand_demo, from = NULL, to = NULL,
-                 hand_nest_colnames = c("Nest1", "Nest2", "Nest3", "Nest4"),
-                 Nestnumbers = Nestnumbers,
-                 num_per_pen = 4,
-                 ot_min_range = seq(-100, 100, by = 50),
-                 timezone = "Europe/Berlin", collect_min = collect_min,
-                 fakeegg = TRUE)
-ot_min <- ot_res[1,1]
-
-
-
-
+######### adjust the autonest clock (optional) #########
+ot_min <- 20
 
 ######### prepare meta file ready for downstream analysis #########
-# ot_min <- 50
 meta_prep <- prep_data(meta_demo, ot_min = ot_min) 
 
 ## add col "pen" to group Nests

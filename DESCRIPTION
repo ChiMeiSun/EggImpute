@@ -1,8 +1,15 @@
 Package: EggImpute
 Title: Egg Laying Data Analysis and Imputation
 Version: 0.1.0
-Authors@R: 
-    person("Chi Mei", "Sun", email = "chimei.sun@fli.de", role = c("aut", "cre"))
+Authors@R: c(
+    person("Chi Mei", "Sun", email = "chimei.sun@fli.de", role = c("aut", "cre")),
+	person("Johannes", "Geibel", role = "ctb"),
+    person("Christian", "Reimer", role = "ctb"),
+	person("Steffen", "Weigend", role = "ctb"),
+	person("Annett", "Weigend", role = "ctb"),
+    person("Nina", "Goetzke", role = "ctb"),
+	person("Friedrich-Loeffler-Institut", role = c("cph", "fnd"))
+	)
 Description: Tools for analyzing egg laying patterns, imputing missing laying dates,
     and assigning eggs to animals using probabilistic methods. Includes data preparation,
     Hidden Markov Model-based imputation, and cross-validation utilities.
