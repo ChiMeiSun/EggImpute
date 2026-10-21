@@ -390,7 +390,8 @@ get_imputed_laydates <- function(pen_meta, aniid,
         ggplot2::scale_color_manual(values = c("TRUE" = "tomato", "dups" = "steelblue1"))
       
       combined_plot <- g1 / g2
-      print(combined_plot)
+      # the plot is returned in $plot; printing it in a script opens the default device and writes Rplots.pdf into the working directory
+      if (interactive()) print(combined_plot)
     }
   }
   
@@ -790,6 +791,8 @@ Norm_prior <- function(prior, result = "prob", index_floornest, pen_meta) {
 #' @param negg data.table of egg counts per nest/floor per date.
 #' @param meta data.table of autonest metadata.
 #' @param ani_info data.table with animal presence/absence info.
+#' @param absent Optional data.table with `ani`, `from`, `to` (Date): days on which an animal is not in its pen
+#'   (e.g. a stay in the infirmary). She is no candidate for an egg on these days (default: NULL).
 #' @param ignore_anis Animal marks in the autonest data to be ignored when imputing (default: c()).
 #' @param index_floornest Integer ID used for floor eggs (default: 99).
 #' @param max_ani_pen Maximum allowed number of candidates per pen. A control to check `ani_info` (default: 21).
@@ -816,7 +819,7 @@ Norm_prior <- function(prior, result = "prob", index_floornest, pen_meta) {
 #' }
 #' @export
 #'
-process_pen <- function(p, negg, meta, ani_info,
+process_pen <- function(p, negg, meta, ani_info, absent = NULL,
                         ignore_anis = c(),
                         index_floornest = 99,
                         max_ani_pen = 21,
@@ -903,6 +906,10 @@ process_pen <- function(p, negg, meta, ani_info,
     check_date(ani_info$Leave)
     ani_info[, Leave := as.Date(Leave)]
     cand_ani <- ani_info[Pen == p & Leave >= date, ani]
+    if (!is.null(absent)) {   # not in the pen that day (e.g. infirmary)
+      out_now <- as.character(absent$ani[absent$from <= date & absent$to >= date])
+      cand_ani <- cand_ani[!as.character(cand_ani) %in% out_now]
+    }
     
     # Sanity check: too many animals
     if (length(cand_ani) > max_ani_pen) {
@@ -1102,6 +1109,8 @@ Add_cv_folds <- function(dt, k = 5, seed = 123) {
 #' @param negg data.table of egg counts per nest/floor per date.
 #' @param meta data.table of autonest metadata.
 #' @param ani_info data.table with animal presence/absence info.
+#' @param absent Optional data.table with `ani`, `from`, `to` (Date): days on which an animal is not in its pen
+#'   (e.g. a stay in the infirmary). She is no candidate for an egg on these days (default: NULL).
 #' @param ignore_anis Animal marks in the autonest data to be ignored when imputing (default: c()).
 #' @param index_floornest Integer ID used for floor eggs (default: 99).
 #' @param max_ani_pen Maximum allowed number of candidates per pen. A control to check `ani_info` (default: 21).
@@ -1124,7 +1133,7 @@ Add_cv_folds <- function(dt, k = 5, seed = 123) {
 #' @export
 #'
 CV_pen <- function(pen_trusted_dat, reps = 2, k = 5, seed = 123,
-                   p, negg, meta, ani_info,
+                   p, negg, meta, ani_info, absent = NULL,
                    ignore_anis = c(),
                    index_floornest = 99,
                    max_ani_pen = 21,
@@ -1221,6 +1230,10 @@ CV_pen <- function(pen_trusted_dat, reps = 2, k = 5, seed = 123,
         check_date(ani_info$Leave)
         ani_info[, Leave := as.Date(Leave)]
         cand_ani <- ani_info[Pen == p & Leave >= date, ani]
+        if (!is.null(absent)) {   # not in the pen that day (e.g. infirmary)
+          out_now <- as.character(absent$ani[absent$from <= date & absent$to >= date])
+          cand_ani <- cand_ani[!as.character(cand_ani) %in% out_now]
+        }
         
         # Sanity check: too many animals
         if (length(cand_ani) > max_ani_pen) {

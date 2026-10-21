@@ -184,6 +184,85 @@ get_test_win <- function(start_date, end_date, min_days = 30) {
 
 
 
+#' Estimate missing collection times in hand-count data
+#'
+#' @description A hand row without `Time_end` (the technician did not write the time down, on a whole
+#' date or for some pens only) gets an estimate: the usual collection time of its pen (median over all
+#' days with a time) plus the shift of that day (median deviation from the pen medians of the pens that
+#' have a time that day, because the whole round starts earlier or later on some days). Without any timed
+#' pen on that date the pen median alone is used, and without any time for that pen the overall median.
+#' The causes and the changes are printed.
+#'
+#' @param hand `data.table` with `Date`, `Time_end` (hh:mm:ss) and `Pen`; optional `Time_start`.
+#'
+#' @return `hand` with `Time_end` filled.
+#' @export
+#'
+fill_hand_time <- function(hand) {
+  if (!inherits(hand, "data.table")) stop("`hand` must be a data.table")
+  check_required_cols(hand, c("Date", "Time_end", "Pen"))
+  hand <- data.table::copy(hand)
+  hand[, Time_end := hms::as_hms(Time_end)]
+  miss <- is.na(hand$Time_end)
+  if (!any(miss)) return(hand)
+
+  # cause: what is missing, and where
+  byd <- hand[, .(rows = .N, no_time = sum(is.na(Time_end))), by = Date][no_time > 0]
+  full <- byd[no_time == rows, .N]
+  message(sprintf("Hand rows without collection time (Time_end): %d of %d (%.1f%%) on %d of %d dates (%d dates without any time, %d partial)",
+                  sum(miss), nrow(hand), 100 * mean(miss), nrow(byd), uniqueN(hand$Date), full, nrow(byd) - full))
+  if ("Time_start" %in% colnames(hand)) {
+    message(sprintf("  of these, Time_start is also missing for %d rows; %d rows with Time_start but no Time_end",
+                    sum(miss & is.na(hand$Time_start)), sum(miss & !is.na(hand$Time_start))))
+  }
+  message("  dates: ", paste(format(byd$Date), " (", byd$no_time, "/", byd$rows, ")", sep = "", collapse = ", "))
+
+  # estimate
+  hand[, `:=`(tsec = as.numeric(Time_end))]
+  pen_med <- hand[!is.na(tsec), .(tpm = stats::median(tsec)), by = Pen]
+  hand[pen_med, on = "Pen", tpm := i.tpm]
+  hand[, tdev := tsec - tpm]
+  day_sh <- hand[!is.na(tdev), .(tsh = stats::median(tdev)), by = Date]
+  hand[day_sh, on = "Date", tsh := i.tsh]
+  all_med <- stats::median(hand$tsec, na.rm = TRUE)
+  est <- ifelse(is.na(hand$tpm), all_med, hand$tpm + ifelse(is.na(hand$tsh), 0, hand$tsh))
+  how <- ifelse(is.na(hand$tpm), "overall median (pen never timed)",
+                ifelse(is.na(hand$tsh), "pen median (no pen timed that day)", "pen median + day shift"))
+  hand[miss, Time_end := hms::as_hms(round(est[miss]))]
+  hand[, c("tsec", "tpm", "tdev", "tsh") := NULL]
+  tb <- table(how[miss])
+  message("  changed: Time_end estimated for ", paste(sprintf("%d by %s", as.integer(tb), names(tb)), collapse = "; "))
+  hand
+}
+
+
+#' Drop pens that are not needed (e.g. an infirmary compartment)
+#'
+#' @description Removes the pens from the autonest data and the hand-count data before the imputation,
+#' which saves time (hidden Markov models and imputation run per animal and pen). The numbers removed are printed.
+#'
+#' @param meta `data.table` with the autonest data after prep_data (columns `pen`, `ani`, `Eggsignal`).
+#' @param hand `data.table` with the hand-count data (column `Pen`).
+#' @param drop_pens Vector of pens to drop, `NULL` for none.
+#' @param why Optional text for the message (the reason).
+#'
+#' @return A list with `meta` and `hand`.
+#' @export
+#'
+drop_pens_data <- function(meta, hand, drop_pens = NULL, why = "") {
+  if (is.null(drop_pens) || length(drop_pens) == 0) return(list(meta = meta, hand = hand))
+  check_required_cols(meta, c("pen", "ani", "Eggsignal"))
+  check_required_cols(hand, c("Pen", "Date"))
+  dm <- meta[pen %in% drop_pens]; dh <- hand[Pen %in% drop_pens]
+  message(sprintf("drop_pens %s%s: autonest %d records (%d egg signals, %d marks, %s ... %s), hand %d rows (%d dates) removed",
+                  paste(drop_pens, collapse = ","), if (nzchar(why)) paste0(" (", why, ")") else "",
+                  nrow(dm), sum(dm$Eggsignal > 0, na.rm = TRUE), data.table::uniqueN(dm$ani[dm$ani != 0]),
+                  if (nrow(dm)) format(min(dm$Date)) else "-", if (nrow(dm)) format(max(dm$Date)) else "-",
+                  nrow(dh), data.table::uniqueN(dh$Date)))
+  list(meta = meta[!pen %in% drop_pens], hand = hand[!Pen %in% drop_pens])
+}
+
+
 #' Combine hand-counted and automated egg data for validation
 #'
 #' @description Reads and integrates manually counted egg data with automatic
@@ -265,8 +344,8 @@ get_good_hand_eggcount <- function(meta_ori, hand_ori, from = NULL, to = NULL,
   if (length(missd) > 0) warning("Missing dates in hand: ", paste0(missd, ","))
   missd_hand <- c(missd)
   
-  notimed <- hand[is.na(Time_end) & is.na(Time_end), .N, by = .(Date)][N >= npen, Date]
-  if (length(notimed) > 0 ) message("Dates wihtout any time records in hand: ", paste0(notimed, ",") )
+  # Hand rows without a collection time (whole dates or some pens only) get an estimated time
+  hand <- fill_hand_time(hand)
   
   # Hand counting reshaped 
   hand_long <- melt(hand[, c("Date", "Time_end", "Pen", hand_nest_colnames), with = FALSE],
@@ -287,13 +366,6 @@ get_good_hand_eggcount <- function(meta_ori, hand_ori, from = NULL, to = NULL,
     hand_long <- rbind(hand_long, tmp, fill = TRUE)
     setorder(hand_long, Date)
   }
-  # Input no time record hand dates with median Time_end
-  if (length(notimed) > 0) {
-    hand_long[Date %in% notimed, 
-              Time_end := hms::as_hms(median(as.numeric(hand_long$Time_end), na.rm = TRUE))
-    ]
-  }
-  
   # Prepare fake egg time 
   if (!is.null(fakeegg_id)) {
     markid <- fakeegg_id
