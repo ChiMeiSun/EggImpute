@@ -411,14 +411,9 @@ get_good_hand_eggcount <- function(meta_ori, hand_ori, from = NULL, to = NULL,
     fakeegg[, pen := NULL]
     fakeegg <- Make_pen_number(fakeegg, Nestnumbers, num_per_pen, verbose = FALSE)
     
-    # Nestnumber should increase with time
+    # No check of the nest order: a nest read out of order (a pen done last, a revisit for a late egg) keeps
+    # its last read of the day; stray reads far from the round are removed above (> 2 h from the median)
     fakeegg[, End_sec := as.numeric(End)]
-    fakeegg <- fakeegg[
-      order(Date, End_sec),
-      .SD[is.na(Nestnumber) | is.na(End_sec) |
-            Nestnumber == cummax(Nestnumber)],
-      by = Date
-    ]
     
     # Fill in missing dates, using hand_time as the "end" time
     tmpt <- hand_long[Date %in% missd_fe, max(Time_end, na.rm = TRUE), by = Date]
@@ -449,6 +444,15 @@ get_good_hand_eggcount <- function(meta_ori, hand_ori, from = NULL, to = NULL,
 
     }, by = Date]
     
+    # A nest without a read takes the read time of its pen that day (the nests of a pen are emptied together);
+    # the line above only fills nests of pens without any read
+    fakeegg[, pen_sec := if (any(!is.na(End_sec))) median(End_sec, na.rm = TRUE) else NA_real_, by = .(Date, pen)]
+    n_pen <- fakeegg[is.na(End_sec) & !is.na(pen_sec), .N]
+    fakeegg[is.na(End_sec) & !is.na(pen_sec), End_filled_sec := pen_sec]
+    message(sprintf("Fakeegg: nests without a read: %d filled from a read in the same pen, %d from the line",
+                    n_pen, fakeegg[is.na(End_sec) & is.na(pen_sec), .N]))
+    fakeegg[, pen_sec := NULL]
+
     fakeegg[, End_filled := hms::as_hms(End_filled_sec)]
     fakeegg[, dtm_a := as.POSIXct(
       sprintf("%s %s", Date, End_filled),

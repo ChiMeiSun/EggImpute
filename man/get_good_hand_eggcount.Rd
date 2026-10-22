@@ -33,6 +33,7 @@ get_good_hand_eggcount(
 
 \item{fakeegg_id}{If manual transponder id for precise time record is available.}
 
+
 \item{extend_min}{Extension in minute for technical variety  (default: \code{10}).}
 
 \item{meta}{A \code{data.table} containing autonest data after prep_data.}
