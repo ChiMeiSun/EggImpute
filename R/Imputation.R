@@ -901,6 +901,8 @@ process_pen <- function(p, negg, meta, ani_info, absent = NULL,
     # Pen/date egg count
     pendate_negg <- pen_negg[Date == date]
     pensurdate_negg <- pen_negg[Date %in% c(date-1, date+1)][order(Date)]
+    if (all(is.na(pendate_negg$Nhand)) && all(is.na(pendate_negg$Nfloor))) next   # pen-day not counted
+    pensurdate_negg <- pensurdate_negg[!is.na(Nhand) | !is.na(Nfloor)]
     
     # Candidate animals in pen
     check_date(ani_info$Leave)
@@ -1225,6 +1227,8 @@ CV_pen <- function(pen_trusted_dat, reps = 2, k = 5, seed = 123,
         # Pen/date egg count
         pendate_negg <- pen_negg[Date == date]
         pensurdate_negg <- pen_negg[Date %in% c(date-1, date+1)][order(Date)]
+        if (all(is.na(pendate_negg$Nhand)) && all(is.na(pendate_negg$Nfloor))) next   # pen-day not counted
+        pensurdate_negg <- pensurdate_negg[!is.na(Nhand) | !is.na(Nfloor)]
         
         # Candidate animals in pen
         check_date(ani_info$Leave)

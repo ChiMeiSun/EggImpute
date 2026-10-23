@@ -356,15 +356,22 @@ get_good_hand_eggcount <- function(meta_ori, hand_ori, from = NULL, to = NULL,
   hand_long <- merge(hand_long, hand[, .(Date, Pen, Nfloor)],
                      by = c("Date", "Pen"), all = TRUE)
 
-  # Input missing hand dates with median Time_end
-  if (length(missd_hand) > 0) {
-    tmp <- data.table(Date = missd_hand, 
-                      Pen = unique(hand_long$Pen),
-                      Time_end = hms::as_hms(median(as.numeric(hand_long$Time_end), na.rm = TRUE)),
-                      Nest = unique(hand_long$Nest),
-                      Nhand = 0, Nfloor = 0)
+  # A recorded pen-day: an empty cell is 0. A pen-day without a record (a pen or a whole date not counted)
+  # gets rows with Nhand/Nfloor NA, so its collection window stays (median time of that date, else of all
+  # dates); it is not used for the hand/autonest check or the imputation.
+  hand_long[is.na(Nhand), Nhand := 0]
+  hand_long[is.na(Nfloor), Nfloor := 0]
+  grid <- CJ(Date = c(unique(hand$Date), missd_hand), Pen = unique(hand$Pen), unique = TRUE)
+  gap <- grid[!unique(hand_long[, .(Date, Pen)]), on = .(Date, Pen)]
+  if (nrow(gap) > 0) {
+    tmed <- hand_long[, .(t = median(as.numeric(Time_end), na.rm = TRUE)), by = Date]
+    gap <- merge(gap, tmed, by = "Date", all.x = TRUE)
+    gap[is.na(t), t := median(as.numeric(hand_long$Time_end), na.rm = TRUE)]
+    nn <- length(hand_nest_colnames)
+    tmp <- gap[, .(Time_end = hms::as_hms(t), Nest = (Pen - 1) * num_per_pen + seq_len(nn), Nhand = NA_real_, Nfloor = NA_real_), by = .(Date, Pen)]
     hand_long <- rbind(hand_long, tmp, fill = TRUE)
     setorder(hand_long, Date)
+    message("Hand pen-days without a record (not counted): ", nrow(gap))
   }
   # Prepare fake egg time 
   if (!is.null(fakeegg_id)) {
