@@ -12,15 +12,21 @@ NULL
 #' @param ot_min How many minutes to correct for the autonest clock (default NULL).
 #' @param dateformat Date format in meta (default "%d.%m.%Y").
 #' @param from,to `Date` or `character(1)`, optional date range (format yyyy-mm-dd.
-#' 
-#' @return A `data.table` with cleaned time/date columns (`hms`/`Date`), and 
-#'   additional columns: `ani` and `type`.
+#' @param stock_tp Optional `data.frame` with the candidates' transponders (columns `Transponder`,
+#'   `AnimalID`, optional `from`/`to` dates). `Animalmark` / `Previousanimalmark` then become the
+#'   AnimalID of `Transponder` / `Previoustransponder` ("0" for no read or a transponder not in it);
+#'   the marks of the file are kept as `Animalmark_raw` / `Previousanimalmark_raw`.
+#'
+#' @return A `data.table` with cleaned time/date columns (`hms`/`Date`), and
+#'   additional columns: `ani` and `type`. With transponder columns, `type` is "pri" (transponder read,
+#'   previous transponder empty), "sec" (transponder empty, previous transponder read) or NA (neither).
 #' @export
 #'
-prep_data <- function(meta_ori, 
-                      ot_min = NULL, 
+prep_data <- function(meta_ori,
+                      ot_min = NULL,
                       dateformat = "%d.%m.%Y",
-                      from = NULL, to = NULL) {
+                      from = NULL, to = NULL,
+                      stock_tp = NULL) {
   if (!inherits(meta_ori, "data.table")) stop("`meta` must be a data.table")
   check_date(from)
   check_date(to)
@@ -83,16 +89,61 @@ prep_data <- function(meta_ori,
   meta[is.na(ot_min), ot_min := 0]
 
   
+  # Marks from the transponders (stock_tp)
+  has_tp <- all(c("Transponder", "Previoustransponder") %in% names(meta))
+  if (!is.null(stock_tp)) {
+    if (!has_tp) stop("stock_tp needs the columns Transponder and Previoustransponder in meta")
+    meta[, `:=`(Animalmark_raw = Animalmark, Previousanimalmark_raw = Previousanimalmark)]
+    meta[, `:=`(Animalmark = tp_to_animal(Transponder, Date, stock_tp),
+                Previousanimalmark = tp_to_animal(Previoustransponder, Date, stock_tp))]
+  }
+
   # Mark ani & pri/sec animals
   meta[, ani := Animalmark]
   meta[Animalmark == 0, ani := Previousanimalmark]
   meta[, ani := as.character(ani)]
-  
-  meta[, type := "pri"]
-  meta[is.na(Animalmark), type := NA_character_]
-  meta[Animalmark == 0, type := "sec"]
-  
+
+  if (has_tp) {
+    t1 <- tp_read(meta$Transponder); t0 <- tp_read(meta$Previoustransponder)
+    if (any(t1 & t0)) stop(sum(t1 & t0), " records with both Transponder and Previoustransponder read")
+    meta[, type := fifelse(t1, "pri", fifelse(t0, "sec", NA_character_))]
+  } else {
+    meta[, type := "pri"]
+    meta[is.na(Animalmark), type := NA_character_]
+    meta[Animalmark == 0, type := "sec"]
+  }
+
   return(meta)
+}
+
+# a transponder was read (not empty, not all zeros)
+tp_read <- function(x) !is.na(x) & !grepl("^[0 ]*$", as.character(x))
+
+#' AnimalID of a transponder read
+#'
+#' @param tp Transponders as read by the autonest.
+#' @param date `Date` of each read.
+#' @param stock_tp `data.frame` with `Transponder`, `AnimalID` and optional `from`, `to` (yyyy-mm-dd): a
+#'   transponder with dates belongs to the animal only within them.
+#' @return Character vector: the AnimalID, or "0" (no read, or a transponder not in `stock_tp`).
+#' @export
+tp_to_animal <- function(tp, date, stock_tp) {
+  st <- as.data.table(stock_tp)[tp_read(Transponder)]
+  for (cc in c("from", "to")) if (!cc %in% names(st)) st[, (cc) := NA_character_]
+  st[, `:=`(Transponder = trimws(as.character(Transponder)), AnimalID = as.character(AnimalID),
+            from = as.Date(as.character(from)), to = as.Date(as.character(to)))]
+  und <- st[is.na(from) & is.na(to)]
+  if (anyDuplicated(und$Transponder)) stop("stock_tp: transponders of two animals without from/to: ",
+                                           paste(unique(und$Transponder[duplicated(und$Transponder)]), collapse = ", "))
+  tp <- trimws(as.character(tp))
+  out <- und$AnimalID[match(tp, und$Transponder)]
+  dt <- st[!is.na(from) | !is.na(to)]
+  for (i in seq_len(nrow(dt))) {
+    k <- tp %in% dt$Transponder[i] & (is.na(dt$from[i]) | date >= dt$from[i]) & (is.na(dt$to[i]) | date <= dt$to[i])
+    out[k] <- dt$AnimalID[i]
+  }
+  out[is.na(out)] <- "0"
+  out
 }
 
 
@@ -105,31 +156,39 @@ prep_data <- function(meta_ori,
 #' @param Nestnumbers Numeric or character vector of nest numbers to assign to pens.
 #' @param num_per_pen Integer, number of nests per pen.
 #' @param verbose Logical, whether to print mapping (default TRUE).
+#' @param nest_pen Optional `data.frame` with columns `from`, `to`, `pen` (pens of unequal size): the pen of
+#'   each range of nest numbers; replaces the division by `num_per_pen`.
 #'
 #' @return A `data.table` identical to `meta` but with an additional column `pen`.
 #' @export
 #'
-Make_pen_number <- function(meta, Nestnumbers, num_per_pen, verbose = TRUE) {
+Make_pen_number <- function(meta, Nestnumbers, num_per_pen, verbose = TRUE, nest_pen = NULL) {
   if (!inherits(meta, "data.table")) stop("`meta` must be a data.table")
   if (!is.numeric(num_per_pen) || num_per_pen <= 0) stop("`num_per_pen` must be a positive integer")
-  
+
   check_required_cols(meta, c("Nestnumber"))
-  
+
   if (!all(Nestnumbers %in% unique(meta$Nestnumber))) {
     missing_vals <- setdiff(Nestnumbers, unique(meta$Nestnumber))
     stop("Some Nestnumbers not found in meta: ", paste(missing_vals, collapse = ", "))
   }
-  
+
+  if (!is.null(nest_pen)) {
+    np <- as.data.frame(nest_pen)
+    mapping <- data.table(Nestnumber = Nestnumbers, pen = NA_integer_)
+    for (r in seq_len(nrow(np))) mapping[Nestnumber >= np$from[r] & Nestnumber <= np$to[r], pen := as.integer(np$pen[r])]
+  } else {
   if (length(Nestnumbers) %% num_per_pen != 0) {
-    stop("Length of Nestnumbers (", length(Nestnumbers), 
+    stop("Length of Nestnumbers (", length(Nestnumbers),
          ") is not divisible by num_per_pen (", num_per_pen, ")")
   }
-  
+
   n_pens <- length(Nestnumbers) / num_per_pen
   mapping <- data.table(
     Nestnumber = Nestnumbers,
     pen = rep(seq_len(n_pens), each = num_per_pen)
   )
+  }
   
   meta <- merge(meta, mapping, by = "Nestnumber", all.x = TRUE)
   
@@ -137,8 +196,28 @@ Make_pen_number <- function(meta, Nestnumbers, num_per_pen, verbose = TRUE) {
     cat("Pen–Nestnumber mapping:\n")
     print(mapping[, .(Nestnumbers = paste(Nestnumber, collapse = ", ")), by = pen])
   }
-  
+
   return(meta)
+}
+
+
+#' Nest number of a nest position in a hand-count pen
+#'
+#' @param Pen Pen of the hand record.
+#' @param pos Position of the nest in the pen (1, 2, ...; the order of `hand_nest_colnames`).
+#' @param num_per_pen Number of nests per pen (pens of equal size).
+#' @param nest_pen Optional `data.frame` with columns `from`, `to`, `pen` (pens of unequal size).
+#'
+#' @return Nest numbers; `NA` for a position beyond the nests of the pen (with `nest_pen`).
+#' @export
+#'
+hand_nest_number <- function(Pen, pos, num_per_pen, nest_pen = NULL) {
+  if (is.null(nest_pen)) return((Pen - 1) * num_per_pen + pos)
+  np <- as.data.frame(nest_pen)
+  i <- match(Pen, np$pen)
+  out <- np$from[i] + pos - 1
+  out[is.na(i) | out > np$to[i]] <- NA
+  as.numeric(out)
 }
 
 
@@ -279,6 +358,9 @@ drop_pens_data <- function(meta, hand, drop_pens = NULL, why = "") {
 #' @param collect_min Total time needed in minutes for egg collection (default: 20).
 #' @param fakeegg_id If manual transponder id for precise time record is available.
 #' @param extend_min Extension in minute for technical variety  (default: `10`).
+#' @param nest_pen Optional `data.frame` with columns `from`, `to`, `pen` for pens of unequal size: nest
+#'   position j of pen p is nest `from + j - 1`; positions beyond `to` are dropped (default: `NULL`, pens of
+#'   `num_per_pen` nests).
 #'
 #' @return A `data.table` containing hand and automatic egg counts per nest and time interval.
 #' with the following key columns:
@@ -300,8 +382,9 @@ get_good_hand_eggcount <- function(meta_ori, hand_ori, from = NULL, to = NULL,
                                    timezone = "Europe/Berlin",
                                    collect_min = 20,
                                    fakeegg_id = NULL,
-                                   extend_min = 10) {
-  
+                                   extend_min = 10,
+                                   nest_pen = NULL) {
+
   if (!inherits(meta_ori, "data.table")) stop("`meta_ori` must be a data.table")
   if (!inherits(hand_ori, "data.table")) stop("`hand_ori` must be a data.table")
   check_required_cols(meta_ori, c("Date", "pen", "Nestnumber", "Eggsignal", "Transponder", "End", "F_combined", "datelay"))
@@ -352,13 +435,16 @@ get_good_hand_eggcount <- function(meta_ori, hand_ori, from = NULL, to = NULL,
                     id.vars = c("Date", "Pen", "Time_end"),
                     variable.name = "Nest", value.name = "Nhand")
   hand_long[, Nest := as.numeric(sub("Nest", "", Nest))]
-  hand_long[, Nest := (Pen - 1) * num_per_pen + Nest]
+  hand_long[, Nest := hand_nest_number(Pen, Nest, num_per_pen, nest_pen)]
+  hand_long <- hand_long[!is.na(Nest)]   # positions beyond the nests of a smaller pen
   hand_long <- merge(hand_long, hand[, .(Date, Pen, Nfloor)],
                      by = c("Date", "Pen"), all = TRUE)
 
   # A recorded pen-day: an empty cell is 0. A pen-day without a record (a pen or a whole date not counted)
   # gets rows with Nhand/Nfloor NA, so its collection window stays (median time of that date, else of all
   # dates); it is not used for the hand/autonest check or the imputation.
+  n_empty <- hand_long[is.na(Nhand), .N] + unique(hand_long[, .(Date, Pen, Nfloor)])[is.na(Nfloor), .N]
+  if (n_empty > 0) message("Hand: ", n_empty, " empty egg cells in recorded rows set to 0")
   hand_long[is.na(Nhand), Nhand := 0]
   hand_long[is.na(Nfloor), Nfloor := 0]
   grid <- CJ(Date = c(unique(hand$Date), missd_hand), Pen = unique(hand$Pen), unique = TRUE)
@@ -368,8 +454,8 @@ get_good_hand_eggcount <- function(meta_ori, hand_ori, from = NULL, to = NULL,
     gap <- merge(gap, tmed, by = "Date", all.x = TRUE)
     gap[is.na(t), t := median(as.numeric(hand_long$Time_end), na.rm = TRUE)]
     nn <- length(hand_nest_colnames)
-    tmp <- gap[, .(Time_end = hms::as_hms(t), Nest = (Pen - 1) * num_per_pen + seq_len(nn), Nhand = NA_real_, Nfloor = NA_real_), by = .(Date, Pen)]
-    hand_long <- rbind(hand_long, tmp, fill = TRUE)
+    tmp <- gap[, .(Time_end = hms::as_hms(t), Nest = hand_nest_number(Pen, seq_len(nn), num_per_pen, nest_pen), Nhand = NA_real_, Nfloor = NA_real_), by = .(Date, Pen)]
+    hand_long <- rbind(hand_long, tmp[!is.na(Nest)], fill = TRUE)
     setorder(hand_long, Date)
     message("Hand pen-days without a record (not counted): ", nrow(gap))
   }
@@ -416,8 +502,8 @@ get_good_hand_eggcount <- function(meta_ori, hand_ori, from = NULL, to = NULL,
     full_grid <- CJ(Date = all_dates, Nestnumber = Nestnumbers, unique = TRUE)
     fakeegg <- merge(full_grid, fakeegg, by = c("Date", "Nestnumber"), all.x = TRUE)
     fakeegg[, pen := NULL]
-    fakeegg <- Make_pen_number(fakeegg, Nestnumbers, num_per_pen, verbose = FALSE)
-    
+    fakeegg <- Make_pen_number(fakeegg, Nestnumbers, num_per_pen, verbose = FALSE, nest_pen = nest_pen)
+
     # No check of the nest order: a nest read out of order (a pen done last, a revisit for a late egg) keeps
     # its last read of the day; stray reads far from the round are removed above (> 2 h from the median)
     fakeegg[, End_sec := as.numeric(End)]

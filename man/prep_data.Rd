@@ -9,7 +9,8 @@ prep_data(
   ot_min = NULL,
   dateformat = "\%d.\%m.\%Y",
   from = NULL,
-  to = NULL
+  to = NULL,
+  stock_tp = NULL
 )
 }
 \arguments{
@@ -19,11 +20,17 @@ prep_data(
 
 \item{from, to}{\code{Date} or \code{character(1)}, optional date range (format yyyy-mm-dd.}
 
+\item{stock_tp}{Optional \code{data.frame} with the candidates' transponders (columns \code{Transponder},
+\code{AnimalID}, optional \code{from}/\code{to} dates). \code{Animalmark} / \code{Previousanimalmark} then become the
+AnimalID of \code{Transponder} / \code{Previoustransponder} ("0" for no read or a transponder not in it);
+the marks of the file are kept as \code{Animalmark_raw} / \code{Previousanimalmark_raw}.}
+
 \item{meta}{A \code{data.table} containing raw autonest data.}
 }
 \value{
 A \code{data.table} with cleaned time/date columns (\code{hms}/\code{Date}), and
-additional columns: \code{ani} and \code{type}.
+additional columns: \code{ani} and \code{type}. With transponder columns, \code{type} is "pri" (transponder read,
+previous transponder empty), "sec" (transponder empty, previous transponder read) or NA (neither).
 }
 \description{
 Cleans and formats raw autonest metadata, converts times to \code{hms} objects,

@@ -4,7 +4,13 @@
 \alias{Make_pen_number}
 \title{Assign pen numbers based on nest numbers}
 \usage{
-Make_pen_number(meta, Nestnumbers, num_per_pen, verbose = TRUE)
+Make_pen_number(
+  meta,
+  Nestnumbers,
+  num_per_pen,
+  verbose = TRUE,
+  nest_pen = NULL
+)
 }
 \arguments{
 \item{meta}{A \code{data.table} containing at least the column \code{"Nestnumber"}.}
@@ -14,6 +20,9 @@ Make_pen_number(meta, Nestnumbers, num_per_pen, verbose = TRUE)
 \item{num_per_pen}{Integer, number of nests per pen.}
 
 \item{verbose}{Logical, whether to print mapping (default TRUE).}
+
+\item{nest_pen}{Optional \code{data.frame} with columns \code{from}, \code{to}, \code{pen} (pens of unequal size): the pen of
+each range of nest numbers; replaces the division by \code{num_per_pen}.}
 }
 \value{
 A \code{data.table} identical to \code{meta} but with an additional column \code{pen}.

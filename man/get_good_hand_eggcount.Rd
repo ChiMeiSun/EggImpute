@@ -15,7 +15,8 @@ get_good_hand_eggcount(
   timezone = "Europe/Berlin",
   collect_min = 20,
   fakeegg_id = NULL,
-  extend_min = 10
+  extend_min = 10,
+  nest_pen = NULL
 )
 }
 \arguments{
@@ -33,8 +34,11 @@ get_good_hand_eggcount(
 
 \item{fakeegg_id}{If manual transponder id for precise time record is available.}
 
-
 \item{extend_min}{Extension in minute for technical variety  (default: \code{10}).}
+
+\item{nest_pen}{Optional \code{data.frame} with columns \code{from}, \code{to}, \code{pen} for pens of unequal size: nest
+position j of pen p is nest \code{from + j - 1}; positions beyond \code{to} are dropped (default: \code{NULL}, pens of
+\code{num_per_pen} nests).}
 
 \item{meta}{A \code{data.table} containing autonest data after prep_data.}
 
