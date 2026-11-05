@@ -1264,10 +1264,10 @@ CV_pen <- function(pen_trusted_dat, reps = 2, k = 5, seed = 123,
         if (nrow(eggs) == 0) next
         
         # Trusted pairs from autonest
-        from <- min(pendate_negg$date_time_pre)
+        from <- max(pendate_negg$date_time_pre)
         to <- max(pendate_negg$date_time)
         dt_trust <- get_trusted_autonest(eggs, pen_meta[ani %in% cand_ani], from, to)
-        
+
         if (nrow(dt_trust) == 0) next
 
         # Mark down the trust rows which will be masked
@@ -1328,15 +1328,29 @@ CV_pen <- function(pen_trusted_dat, reps = 2, k = 5, seed = 123,
             cand_ani <- cand_ani[!cand_ani %in% rmid]
           }
         }
-        
-        
+
+        # more eggs than candidates: remove extra egg(s), as in process_pen
+        if (nrow(eggs) > length(cand_ani)) {
+          eggs <- eggs[1:length(cand_ani)]
+          if (length(cand_ani) == 0) eggs <- eggs[0]
+        }
+
         # Naive prior
         prior <- make_naive_prior(eggs$eggid, cand_ani)
-        
+
+        # nothing left to assign: the masked eggs are not recovered
+        if (nrow(prior) == 0) {
+          prev_prior <- prior
+          masked_rows[, `:=`(nest = substr(eid, 7, 9), topx = FALSE, prior = NA_real_, rep = r, topx2 = FALSE, prior2 = NA_real_)]
+          if (flat == TRUE) masked_rows[, `:=`(n_cand = 0L, n_eggs = 0L, chance_nest = NA_real_, chance_hen = NA_real_)]
+          masked_res[[length(masked_res) + 1]] <- masked_rows
+          next
+        }
+
         if (flat == TRUE) {
           prior <- prior
-          
-        } else {        
+
+        } else {
           # Update by laydates (+imputed) based on laying pattern throughout the period
           prior <- update_prior_laydates(prior, ani_impeggs, from, to, date, pen_meta,
                                          weight = weight_imd, factor = factor_imd, p_perc_dups = p_perc_dups)
@@ -1403,9 +1417,12 @@ CV_pen <- function(pen_trusted_dat, reps = 2, k = 5, seed = 123,
 
         # flat only: chance level
         if (flat == TRUE) {
-          masked_rows[, `:=`(n_cand = ncol(prior), n_eggs = nrow(prior))]
-          masked_rows[egg_quota, on = .(nest), chance_nest := pmin(1, i.N / n_cand)]
-          masked_rows[, chance_hen := pmin(1, n_eggs / n_cand)]
+          # outside j: masked_rows has a column named prior
+          nc <- ncol(prior)
+          ne <- nrow(prior)
+          masked_rows[, `:=`(n_cand = nc, n_eggs = ne)]
+          masked_rows[egg_quota, on = .(nest), chance_nest := pmin(1, i.N / nc)]
+          masked_rows[, chance_hen := pmin(1, ne / nc)]
         }
 
         masked_res[[length(masked_res) + 1]] <- masked_rows
