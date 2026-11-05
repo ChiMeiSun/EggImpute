@@ -660,9 +660,9 @@ assign_greedy <- function(dt, nestleftover = NULL, pen_meta) {
   # For floor assignment, add on nest leftover
   if (!is.null(nestleftover) && nrow(nestleftover) > 0) {
     nlo <- nestleftover[, .(p = sum(p)), by = ani]
-    tmp <- merge(dt, nlo, by = "ani", all.x = TRUE)
-    tmp[, p := p.x + ifelse(is.na(p.y), 0, p.y)]
-    dt$p <- tmp$p
+    # matched by ani (merge() sorts by ani, so its rows are not in the order of dt)
+    lo_p <- nlo$p[match(dt$ani, nlo$ani)]
+    dt$p <- dt$p + ifelse(is.na(lo_p), 0, lo_p)
     nestleftover <- NULL
   }
   
