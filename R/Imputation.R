@@ -1401,6 +1401,13 @@ CV_pen <- function(pen_trusted_dat, reps = 2, k = 5, seed = 123,
         # rm dup cols
         masked_rows[, (grep("^i\\.", names(masked_rows))) := NULL]
 
+        # flat only: chance level
+        if (flat == TRUE) {
+          masked_rows[, `:=`(n_cand = ncol(prior), n_eggs = nrow(prior))]
+          masked_rows[egg_quota, on = .(nest), chance_nest := pmin(1, i.N / n_cand)]
+          masked_rows[, chance_hen := pmin(1, n_eggs / n_cand)]
+        }
+
         masked_res[[length(masked_res) + 1]] <- masked_rows
       }
     }
