@@ -1130,6 +1130,11 @@ Add_cv_folds <- function(dt, k = 5, seed = 123) {
 #' @param factor_np For nest preference update: Factor (default: 1).
 #' @param norm_result Character, either `"prob"` to normalize probabilities (default) or `"assign"`.
 #' @param flat TRUE: to get only flat priors; FALSE: to get Bayesian updated probabilities (default: FALSE).
+#' @param mask_features TRUE: the features do not see the masked eggs of the fold, as for a missed egg in real imputation (default: FALSE).
+#' @param hmm_refit TRUE: refit the HMM per fold on the records left (needs mask_features).
+#' @param hmm_set List of settings of `get_imputed_laydates` for hmm_refit.
+#' @param hmm_seed Seed for hmm_refit, as in EggImpute.r.
+#' @param rep_ids Repetitions to run; NULL: all of `reps`. Folds per repetition stay the same.
 #'
 #' @return Data table of masked trusted egg-animal pairs with evaluation results.
 #' @export
@@ -1145,8 +1150,11 @@ CV_pen <- function(pen_trusted_dat, reps = 2, k = 5, seed = 123,
                    weight_nl = 0.8, factor_nl = 1,
                    weight_np = 0.2, factor_np = 1,
                    norm_result = "prob",
-                   flat = FALSE) {
-  
+                   flat = FALSE,
+                   mask_features = FALSE,
+                   hmm_refit = FALSE, hmm_set = NULL, hmm_seed = 2026L,
+                   rep_ids = NULL) {
+
   if (!is.data.table(meta)) {
     stop("'meta' must be a data.table.")
   }
@@ -1158,14 +1166,14 @@ CV_pen <- function(pen_trusted_dat, reps = 2, k = 5, seed = 123,
   }
   if (!is.data.table(ani_impeggs)) {
     stop("'ani_impeggs' must be a data.table.")
-  }  
+  }
   if (!is.numeric(nearby_days) || nearby_days < 1) {
     stop("'nearby_days' must be a positive integer.")
   }
-  
+
   nearby_days <- as.integer(nearby_days)
   max_ani_pen <- as.integer(max_ani_pen)
-  
+
   for (arg_name in c("weight_imd", "factor_imd", "p_perc_dups",
                      "penalty_weight", "max_penalty", "weight_nl", "factor_nl",
                      "weight_np", "factor_np")) {
@@ -1174,15 +1182,16 @@ CV_pen <- function(pen_trusted_dat, reps = 2, k = 5, seed = 123,
       stop(arg_name, " must be a non-negative numeric value.")
     }
   }
-  
+
   if (!norm_result %in% c("prob", "assign")) {
     stop("Argument 'result' must be either 'prob' or 'assign'")
   }
-  
+
   if (flat == TRUE) {
     message("flat = TRUE, ignore norm_result, computing flat (equal) priors")
   }
-  
+  if (hmm_refit && !mask_features) stop("hmm_refit needs mask_features = TRUE")
+
   if (!is.numeric(reps) || reps < 1) stop("'reps' must be a positive integer")
   if (!is.numeric(k) || k < 2) stop("'k' (folds) must be integer >= 2")
   if (!is.numeric(seed)) stop("'seed' must be numeric")
@@ -1212,13 +1221,25 @@ CV_pen <- function(pen_trusted_dat, reps = 2, k = 5, seed = 123,
   # CV
   masked_res <- list()
   
-  for (r in seq_len(reps)) {
+  for (r in if (is.null(rep_ids)) seq_len(reps) else rep_ids) {
     pen_trusted_dat <- Add_cv_folds(pen_trusted_dat, k = k, seed = seed + r)
     
     for (f in seq_len(k)) {
       cat("Pen:", p, ", rep =", r, ", fold =", f, ", seed =", seed, "\n")
       mask_info <- pen_trusted_dat[fold == f]
       prev_prior <- NULL
+
+      # mask_features: the features do not see the masked eggs, as for a missed egg in real imputation
+      pen_meta_f <- pen_meta
+      ani_impeggs_f <- ani_impeggs
+      ani_prefer_nest_f <- ani_prefer_nest
+      if (mask_features) {
+        pen_meta_f <- pen_meta[!mask_info, on = .(ani, datelay)]
+        ani_prefer_nest_f <- pen_meta_f[, .(sumdu = sum(Duration)), by = .(ani, Nestnumber)][ani != 0]
+        ani_prefer_nest_f[, prop := as.numeric(sumdu) / as.numeric(sum(sumdu)), by = ani]
+        ani_prefer_nest_f[is.na(prop), prop := 0]
+        if (hmm_refit) ani_impeggs_f <- refit_hmm_fold(pen_meta_f, p, hmm_set, hmm_seed)
+      }
 
       for (d in seq_along(dates)) {
         date <- dates[d]
@@ -1298,7 +1319,7 @@ CV_pen <- function(pen_trusted_dat, reps = 2, k = 5, seed = 123,
           eggs_tmp[, nestc := seq_len(.N), by = Nest]
           eggs_tmp[, eggid := sprintf("%s%03d%02d", format(date, "%y%m%d"), Nest, nestc)]
           eggs_tmp[, nestc := NULL]
-          dt_trust_tmp <- get_trusted_autonest(eggs_tmp, pen_meta[ani %in% cand_ani], from_tmp, to_tmp)
+          dt_trust_tmp <- get_trusted_autonest(eggs_tmp, pen_meta_f[ani %in% cand_ani], from_tmp, to_tmp)
           if (nrow(dt_trust_tmp) > 0) {
             dt_trust_tmp[, datelay_exd := datelay + dir*thrd_laydiff*60*60]
             dt_trust_tmp[, dir := dir]
@@ -1352,22 +1373,22 @@ CV_pen <- function(pen_trusted_dat, reps = 2, k = 5, seed = 123,
 
         } else {
           # Update by laydates (+imputed) based on laying pattern throughout the period
-          prior <- update_prior_laydates(prior, ani_impeggs, from, to, date, pen_meta,
+          prior <- update_prior_laydates(prior, ani_impeggs_f, from, to, date, pen_meta_f,
                                          weight = weight_imd, factor = factor_imd, p_perc_dups = p_perc_dups)
-          
+
           # Update by nearby days' laying pattern
-          prior <- update_prior_nestlay(prior, eggs, cand_ani, pen_meta, from, to, 
+          prior <- update_prior_nestlay(prior, eggs, cand_ani, pen_meta_f, from, to,
                                         index_floornest = index_floornest,
-                                        nearby_days = nearby_days, 
-                                        penalty_weight = penalty_weight, max_penalty = max_penalty, 
+                                        nearby_days = nearby_days,
+                                        penalty_weight = penalty_weight, max_penalty = max_penalty,
                                         weight = weight_nl, factor = factor_nl)
-          
+
           # Update by nest preference
-          prior <- update_prior_nestpref(prior, eggs, ani_prefer_nest, 
+          prior <- update_prior_nestpref(prior, eggs, ani_prefer_nest_f,
                                          index_floornest, weight = weight_np, factor = factor_np)
-          
+
           # Normalise prior
-          prior <- Norm_prior(prior, result = norm_result, index_floornest, pen_meta)
+          prior <- Norm_prior(prior, result = norm_result, index_floornest, pen_meta_f)
         }
         # Check prob sums
         bad <- which(rowSums(prior) > 1 + 1e-6)
@@ -1432,4 +1453,20 @@ CV_pen <- function(pen_trusted_dat, reps = 2, k = 5, seed = 123,
   
   masked_res <- rbindlist(masked_res, fill = TRUE)
   return(masked_res)
+}
+
+
+# HMM of all hens of a pen on the records left in a CV fold; same seed per hen as in EggImpute.r
+refit_hmm_fold <- function(pen_meta_f, p, hmm_set, hmm_seed) {
+  pm <- data.table::copy(pen_meta_f)
+  setorder(pm, ani, datelay)
+  pm[Eggsignal > 0, laydiffh_pre_all := as.numeric((datelay - shift(datelay, type = "lag")), units = "hours"), by = ani]
+  pm[Eggsignal > 0, laydiffh_nxt_all := as.numeric(abs(datelay - shift(datelay, type = "lead")), units = "hours"), by = ani]
+  anis <- pm[ani != 0 & Eggsignal > 0, unique(ani)]
+  out <- lapply(anis, function(a) {
+    set.seed(digest::digest2int(paste(p, a), hmm_seed))
+    res <- do.call(get_imputed_laydates, c(list(pen_meta = pm, aniid = a, plot = FALSE), hmm_set))
+    if (is.null(res)) NULL else res$output
+  })
+  rbindlist(out, fill = TRUE)
 }
